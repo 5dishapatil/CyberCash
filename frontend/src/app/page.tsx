@@ -110,13 +110,13 @@ export default function CommandCentre() {
               <div 
                 key={inc.id} 
                 onClick={() => setActiveIncident(isActive ? null : inc)}
-                className={p-3 rounded border cursor-pointer transition-all }
+                className={`p-3 rounded border cursor-pointer transition-all ${isActive ? 'bg-cyan-950/40 border-cyan-500/50' : 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-800'}`}
               >
                 <div className="flex justify-between items-center mb-2">
-                  <span className={ont-mono text-[10px] px-1.5 py-0.5 rounded }>
+                  <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded ${isCritical ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400'}`}>
                     {inc.id.substring(0,8)}
                   </span>
-                  <span className="font-mono text-[11px] text-slate-400">?{inc.amount_at_risk.toLocaleString()}</span>
+                  <span className="font-mono text-[11px] text-slate-400">₹{inc.amount_at_risk.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-end">
                   <div>
@@ -124,7 +124,7 @@ export default function CommandCentre() {
                     <div className="text-[10px] text-slate-500 mt-0.5">Assigned: {inc.status}</div>
                   </div>
                   <div className="text-right">
-                    <div className={	ext-lg font-bold font-mono }>{(p.cashout_probability * 100).toFixed(0)}%</div>
+                    <div className={`text-lg font-bold font-mono ${isCritical ? 'text-rose-500' : 'text-amber-500'}`}>{(p.cashout_probability * 100).toFixed(0)}%</div>
                     <div className="text-[9px] text-slate-500 uppercase">Cashout Prob</div>
                   </div>
                 </div>
@@ -197,7 +197,7 @@ export default function CommandCentre() {
                   </div>
                   <div>
                     <div className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Spatial Resolution</div>
-                    <div className={	ext-sm font-bold }>
+                    <div className={`text-sm font-bold ${p.top_k_terminals?.length > 0 ? 'text-amber-400' : 'text-rose-500'}`}>
                       {p.top_k_terminals?.length > 0 ? 'Terminals Identified' : 'ABSTENTION: Region Only'}
                     </div>
                   </div>

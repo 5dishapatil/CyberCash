@@ -38,7 +38,7 @@ export default function MapComponent({ activeIncident, predictions, showInfrastr
 
       {/* 2. Incident Command View: Show specific region and candidate ATMs */}
       {activeIncident && predictions && predictions.filter(p => p.incident_id === activeIncident.id).map(p => (
-        <div key={inc-view-}>
+        <div key={`inc-view-${p.id}`}>
           <Circle 
             center={center} 
             pathOptions={{ color: '#e11d48', fillColor: '#e11d48', fillOpacity: 0.2, dashArray: "5, 10" }} 
