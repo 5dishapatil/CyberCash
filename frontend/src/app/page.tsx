@@ -19,7 +19,7 @@ export default function Home() {
          setIncidents(data);
          if (data.length > 0) {
             // Fetch predictions for the most recent active incident
-            fetch(http://localhost:8000/api/predictions/ + data[0].id)
+            fetch('http://localhost:8000/api/predictions/' + data[0].id)
               .then(res => res.json())
               .then(pData => setPredictions(pData));
          }
@@ -86,7 +86,7 @@ export default function Home() {
                     <span className="font-mono text-xs text-slate-400">INCIDENT {inc.id}</span>
                     <h3 className="font-bold text-rose-400">{inc.incident_type}</h3>
                   </div>
-                  <span className="text-rose-400 font-bold font-mono">?{inc.amount_at_risk}</span>
+                  <span className="text-rose-400 font-bold font-mono">₹{inc.amount_at_risk}</span>
                 </div>
                 
                 {/* Prediction Details if matching this incident */}
@@ -115,9 +115,9 @@ export default function Home() {
           <h2 className="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">Live Transaction Feed</h2>
           <div className="flex-1 overflow-y-auto space-y-1 pr-2">
             {events.map((ev: any, i: number) => (
-              <div key={i} className={	ext-xs p-2 rounded flex justify-between items-center }>
+              <div key={i} className={`text-xs p-2 rounded flex justify-between items-center ${ev.risk === 'HIGH' ? 'bg-rose-900/50 text-rose-200 border border-rose-800' : 'bg-slate-700/50 text-slate-300'}`}>
                 <span className="font-mono">{ev.source} &rarr; {ev.destination}</span>
-                <span className="font-mono font-bold">?{ev.amount.toFixed(0)}</span>
+                <span className="font-mono font-bold">₹{ev.amount.toFixed(0)}</span>
               </div>
             ))}
           </div>
