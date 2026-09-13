@@ -1,69 +1,103 @@
-import Image from "next/image";
+'use client';
+import { useEffect, useState, useRef } from 'react';
+import dynamic from 'next/dynamic';
+import { Play, Pause, FastForward, AlertTriangle } from 'lucide-react';
+
+const MapComponent = dynamic(() => import('./components/MapComponent'), { ssr: false });
 
 export default function Home() {
+  const [incidents, setIncidents] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [terminals, setTerminals] = useState([]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  
+  useEffect(() => {
+    fetch('http://localhost:8000/api/terminals')
+      .then(res => res.json())
+      .then(data => setTerminals(data));
+
+    fetch('http://localhost:8000/api/incidents')
+      .then(res => res.json())
+      .then(data => setIncidents(data));
+
+    const ws = new WebSocket('ws://localhost:8000/api/ws');
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === 'EVENT') {
+        setEvents(prev => [msg.data, ...prev].slice(0, 50));
+      } else if (msg.type === 'ALERT') {
+        fetch('http://localhost:8000/api/incidents')
+          .then(res => res.json())
+          .then(data => setIncidents(data));
+      }
+    };
+    return () => ws.close();
+  }, []);
+
+  const handleStart = async () => {
+    await fetch('http://localhost:8000/api/simulation/start', { method: 'POST' });
+    setIsPlaying(true);
+  };
+
+  const handlePause = async () => {
+    await fetch('http://localhost:8000/api/simulation/pause', { method: 'POST' });
+    setIsPlaying(false);
+  };
+
+  const handleFraud = async () => {
+    await fetch('http://localhost:8000/api/simulation/fraud', { method: 'POST' });
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="flex h-screen bg-slate-900 text-white font-sans overflow-hidden">
+      {/* Sidebar - Controls & Events */}
+      <div className="w-1/3 flex flex-col border-r border-slate-700 bg-slate-800 p-4 space-y-4 overflow-y-auto">
+        <h1 className="text-2xl font-bold text-cyan-400">CyberCash Sentinel</h1>
+        
+        {/* Controls */}
+        <div className="bg-slate-700 p-4 rounded-lg flex space-x-2">
+          <button onClick={handleStart} disabled={isPlaying} className="p-2 bg-emerald-600 rounded disabled:opacity-50"><Play size={20}/></button>
+          <button onClick={handlePause} disabled={!isPlaying} className="p-2 bg-rose-600 rounded disabled:opacity-50"><Pause size={20}/></button>
+          <button onClick={handleFraud} className="flex items-center space-x-2 p-2 bg-purple-600 rounded hover:bg-purple-500 transition ml-auto">
+            <AlertTriangle size={16}/> <span>Inject Fraud Cascade</span>
+          </button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Incidents */}
+        <div>
+          <h2 className="text-lg font-semibold text-rose-400 mb-2">High Risk Incidents</h2>
+          <div className="space-y-2">
+            {incidents.length === 0 && <p className="text-slate-400 text-sm">No incidents detected.</p>}
+            {incidents.map((inc: any) => (
+              <div key={inc.id} className="p-3 bg-slate-700 border border-rose-500 rounded">
+                <div className="flex justify-between">
+                  <span className="font-mono text-sm">{inc.id}</span>
+                  <span className="text-rose-400 font-bold"></span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">Source: {inc.trigger_source}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      </main>
+
+        {/* Live Feed */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <h2 className="text-lg font-semibold text-slate-300 mb-2">Live Transaction Feed</h2>
+          <div className="flex-1 overflow-y-auto space-y-1">
+            {events.map((ev: any, i: number) => (
+              <div key={i} className={	ext-xs p-2 rounded flex justify-between {ev.risk === 'HIGH' ? 'bg-rose-900/50 text-rose-200' : 'bg-slate-700 text-slate-300'}}>
+                <span>{ev.source} &rarr; {ev.destination}</span>
+                <span className="font-mono"></span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main - Map */}
+      <div className="w-2/3 h-full bg-slate-950 relative">
+        <MapComponent terminals={terminals} incidents={incidents} />
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from app.db.database import get_db
-from app.models.domain import Incident, Prediction, Transaction
+from app.models.domain import Incident, Prediction, Transaction, Terminal
 from app.simulator.engine import engine
 from pydantic import BaseModel
 import asyncio
@@ -9,20 +9,17 @@ import json
 
 router = APIRouter()
 
-class EventSchema(BaseModel):
-    source_account: str
-    destination_account: str
-    amount: float
-    device_id: str
-    bank_id: str
-
 @router.get("/incidents")
 def get_incidents(db: Session = Depends(get_db)):
-    return db.query(Incident).all()
+    return db.query(Incident).order_by(Incident.creation_time.desc()).all()
 
 @router.get("/predictions/{incident_id}")
 def get_predictions(incident_id: str, db: Session = Depends(get_db)):
     return db.query(Prediction).filter(Prediction.incident_id == incident_id).order_by(Prediction.timestamp.desc()).all()
+
+@router.get("/terminals")
+def get_terminals(db: Session = Depends(get_db)):
+    return db.query(Terminal).all()
 
 @router.post("/simulation/start")
 async def start_sim():
@@ -41,7 +38,7 @@ def set_speed(speed: float):
 
 @router.post("/simulation/fraud")
 def trigger_fraud_cascade():
-    # Will implement the fraud cascade logic later
+    engine.schedule_fraud()
     return {"status": "fraud scenario triggered"}
 
 @router.websocket("/ws")
