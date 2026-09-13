@@ -122,9 +122,9 @@ export default function Home() {
           <h2 className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Event Stream</h2>
           <div className="flex-1 overflow-y-auto space-y-1 pr-1">
             {events.map((ev: any, i: number) => (
-              <div key={i} className={	ext-[10px] p-1.5 rounded flex justify-between items-center }>
+              <div key={i} className={`text-[10px] p-1.5 rounded flex justify-between items-center ${ev.risk === 'HIGH' ? 'bg-rose-900/40 text-rose-300 border border-rose-800/50' : 'bg-slate-800/50 text-slate-400'}`}>
                 <span className="font-mono">{ev.source} &rarr; {ev.destination}</span>
-                <span className="font-mono">?{ev.amount.toFixed(0)}</span>
+                <span className="font-mono">₹{ev.amount.toFixed(0)}</span>
               </div>
             ))}
           </div>
