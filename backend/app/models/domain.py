@@ -1,7 +1,24 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, JSON
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, JSON, Text
 from sqlalchemy.orm import relationship
 from app.db.database import Base
 import datetime
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(String, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    role = Column(String) # BANK, LEA, I4C, SUPERVISOR, JUDGE
+    bank_id = Column(String, ForeignKey("banks.id"), nullable=True) # Only for BANK role
+    full_name = Column(String)
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    user_id = Column(String, ForeignKey("users.id"))
+    action = Column(String)
+    details = Column(String)
 
 class Bank(Base):
     __tablename__ = "banks"
@@ -69,6 +86,8 @@ class Incident(Base):
     ground_truth_time = Column(DateTime, nullable=True)
     prediction_status = Column(String)
     risk_level = Column(String, default="LOW")
+    status = Column(String, default="NEW") # NEW, ACKNOWLEDGED, ASSIGNED, IN_PROGRESS, RESOLVED
+    assigned_to = Column(String, ForeignKey("users.id"), nullable=True)
     active = Column(Boolean, default=True)
 
 class Prediction(Base):
@@ -84,4 +103,5 @@ class Prediction(Base):
     confidence = Column(Float)
     explanations = Column(JSON)
     recommended_action = Column(String)
+    model_version = Column(String, default="V1.0 Baseline")
 

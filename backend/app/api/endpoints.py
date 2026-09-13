@@ -1,13 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from app.db.database import get_db
-from app.models.domain import Incident, Prediction, Transaction, Terminal
+from app.models.domain import Incident, Prediction, Transaction, Terminal, User
 from app.simulator.engine import engine
 from pydantic import BaseModel
 import asyncio
 import json
 
 router = APIRouter()
+
+class EventSchema(BaseModel):
+    source_account: str
+    destination_account: str
+    amount: float
+    device_id: str
+    bank_id: str
+
+@router.get("/terminals")
+def get_terminals(db: Session = Depends(get_db)):
+    return db.query(Terminal).limit(50).all()
 
 @router.get("/incidents")
 def get_incidents(db: Session = Depends(get_db)):
@@ -16,10 +27,6 @@ def get_incidents(db: Session = Depends(get_db)):
 @router.get("/predictions/{incident_id}")
 def get_predictions(incident_id: str, db: Session = Depends(get_db)):
     return db.query(Prediction).filter(Prediction.incident_id == incident_id).order_by(Prediction.timestamp.desc()).all()
-
-@router.get("/terminals")
-def get_terminals(db: Session = Depends(get_db)):
-    return db.query(Terminal).all()
 
 @router.post("/simulation/start")
 async def start_sim():
@@ -33,12 +40,12 @@ def pause_sim():
 
 @router.post("/simulation/speed")
 def set_speed(speed: float):
-    engine.speed = speed
+    engine.set_speed(speed)
     return {"status": "speed updated", "speed": speed}
 
 @router.post("/simulation/fraud")
-def trigger_fraud_cascade():
-    engine.schedule_fraud()
+async def trigger_fraud_cascade():
+    await engine.trigger_fraud_cascade()
     return {"status": "fraud scenario triggered"}
 
 @router.websocket("/ws")
