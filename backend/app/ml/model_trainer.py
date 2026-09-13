@@ -5,43 +5,16 @@ import joblib
 import os
 import random
 import lightgbm as lgb
-from scipy.optimize import minimize
 from app.db.database import SessionLocal
 from app.models.domain import Account, Withdrawal, Transaction
 from app.ml.features import calculate_point_in_time_features
-
-class PlattScaler:
-    def __init__(self):
-        self.A = 0.0
-        self.B = 0.0
-    def fit(self, scores, y):
-        def obj_fn(params):
-            A, B = params
-            p = 1.0 / (1.0 + np.exp(A * scores + B))
-            p = np.clip(p, 1e-10, 1 - 1e-10)
-            return -np.sum(y * np.log(p) + (1 - y) * np.log(1 - p))
-        res = minimize(obj_fn, [0.0, 0.0], method='BFGS')
-        self.A, self.B = res.x
-    def predict_proba(self, scores):
-        return 1.0 / (1.0 + np.exp(self.A * scores + self.B))
-
-class CalibratedModel:
-    def __init__(self, base_model, scaler):
-        self.base_model = base_model
-        self.scaler = scaler
-    def predict_proba(self, X):
-        raw_scores = self.base_model.predict(X)
-        return self.scaler.predict_proba(raw_scores)
-    def predict_raw(self, X):
-        return self.base_model.predict(X)
+from app.ml.calibration import PlattScaler, CalibratedModel
 
 def build_dataset(db):
     print("Extracting actual temporal events from DB...")
-    # We will sample states strictly from the historical transactions
     txs = db.query(Transaction).order_by(Transaction.timestamp.asc()).all()
     withdrawals = db.query(Withdrawal).all()
     
-    # Map account -> withdrawal times
     wd_map = {}
     for w in withdrawals:
         if w.account_id not in wd_map:
@@ -49,9 +22,6 @@ def build_dataset(db):
         wd_map[w.account_id].append(w.timestamp)
         
     data = []
-    
-    # Generate samples at various transaction timestamps
-    # To save time, we sample 2000 points
     sampled_txs = random.sample(txs, min(2000, len(txs))) if txs else []
     
     count = 0
@@ -63,7 +33,6 @@ def build_dataset(db):
         T = tx.timestamp
         acc_id = tx.destination_account
         
-        # Determine Target: cashout_within_30m
         label = 0
         if acc_id in wd_map:
             for wd_time in wd_map[acc_id]:
@@ -72,7 +41,6 @@ def build_dataset(db):
                     label = 1
                     break
                     
-        # Extract true point-in-time features
         feats = calculate_point_in_time_features(db, acc_id, T)
         feats["timestamp"] = T
         feats["label"] = label
@@ -89,7 +57,7 @@ def train_and_save_model():
     db.close()
     
     if df.empty or df['label'].sum() == 0:
-        print("No valid training data or no positive labels found. Please run data_generator.py first.")
+        print("No valid training data.")
         return
         
     print(f"Dataset built. Total samples: {len(df)}, Positives: {df['label'].sum()}")
@@ -105,11 +73,9 @@ def train_and_save_model():
     X_train, y_train = train_df[feature_cols], train_df["label"]
     X_val, y_val = val_df[feature_cols], val_df["label"]
     
-    print("Training LightGBM Regressor (for raw logits)...")
     base_clf = lgb.LGBMRegressor(n_estimators=100, random_state=42)
     base_clf.fit(X_train, y_train)
     
-    print("Calibrating Classifier using Platt Scaling...")
     val_scores = base_clf.predict(X_val)
     scaler = PlattScaler()
     scaler.fit(val_scores, y_val.values)

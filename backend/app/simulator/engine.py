@@ -49,32 +49,35 @@ class SimulationEngine:
         db.commit()
         return {"id": tx.id, "timestamp": tx.timestamp.isoformat(), "source": tx.source_account, "destination": tx.destination_account, "amount": tx.amount, "risk": tx.risk_signal}
 
+    def _snapshot_prediction(self, db: Session, inc_id: str, account_id: str):
+        prob, features = predict_cashout(db, account_id, self.simulation_time)
+        loc_conf, terminals, max_travel_time = rank_candidate_terminals(db, account_id, self.simulation_time)
+        radius_km = (max_travel_time / 60.0) * 30.0 if max_travel_time > 0 else 10.0
+        
+        pred = Prediction(
+            id=f"PRD_{random.randint(10000,99999)}", incident_id=inc_id,
+            timestamp=self.simulation_time, cashout_probability=prob,
+            estimated_time_window_start=self.simulation_time + datetime.timedelta(minutes=5),
+            estimated_time_window_end=self.simulation_time + datetime.timedelta(minutes=30),
+            predicted_region_h3=str(radius_km), 
+            top_k_terminals=terminals if loc_conf != "LOW" else [],
+            confidence=0.85 if loc_conf != "LOW" else 0.4,
+            explanations=[
+                {"reason": f"Calibrated P(Cashout|T)={prob:.2f}. Actual Velocity={features['velocity_5m']}.", "weight": 0.9},
+                {"reason": f"Location Confidence: {loc_conf}. Features strict point-in-time.", "weight": 1.0}
+            ],
+            recommended_action="Enhanced monitoring" if loc_conf == "LOW" else "Escalate to LEA patrol",
+            model_version="V1.0 Calibrated"
+        )
+        db.add(pred)
+        db.commit()
+
     async def trigger_fraud_cascade(self, seed=42):
         random.seed(seed)
         db = SessionLocal()
         accounts = db.query(Account).limit(10).all()
         victim = accounts[0]
         mules = accounts[1:5]
-        
-        tx1 = Transaction(
-            id=f"TXF_{random.randint(1000,9999)}", timestamp=self.simulation_time,
-            source_account=victim.id, destination_account=mules[0].id,
-            amount=480000, transaction_type="TRANSFER", bank_id=victim.bank_id, risk_signal="HIGH"
-        )
-        db.add(tx1)
-        db.commit()
-        
-        # Advance time by 2 minutes
-        self.simulation_time += datetime.timedelta(minutes=2)
-        
-        for m in mules[1:]:
-            tx = Transaction(
-                id=f"TXF_{random.randint(1000,9999)}", timestamp=self.simulation_time,
-                source_account=mules[0].id, destination_account=m.id,
-                amount=480000 / 3, transaction_type="TRANSFER", bank_id=mules[0].bank_id, risk_signal="HIGH"
-            )
-            db.add(tx)
-        db.commit()
         
         inc = Incident(
             id=f"INC_{random.randint(1000,9999)}", incident_type="MULE_CASCADE",
@@ -84,32 +87,37 @@ class SimulationEngine:
         db.add(inc)
         db.commit()
         
-        # True Point in Time prediction!
-        prob, features = predict_cashout(db, mules[0].id, self.simulation_time)
-        
-        origin_lat, origin_lng = 18.5204, 73.8567
-        time_window_mins = 30.0 
-        
-        loc_conf, terminals, max_travel_time = rank_candidate_terminals(db, mules[0].id, prob, origin_lat, origin_lng, time_window_mins)
-        radius_km = (max_travel_time / 60.0) * 30.0 if max_travel_time > 0 else 10.0
-        
-        pred = Prediction(
-            id=f"PRD_{random.randint(1000,9999)}", incident_id=inc.id,
-            timestamp=self.simulation_time, cashout_probability=prob,
-            estimated_time_window_start=self.simulation_time + datetime.timedelta(minutes=5),
-            estimated_time_window_end=self.simulation_time + datetime.timedelta(minutes=30),
-            predicted_region_h3=str(radius_km), 
-            top_k_terminals=terminals if loc_conf != "LOW" else [],
-            confidence=0.85 if loc_conf != "LOW" else 0.4,
-            explanations=[
-                {"reason": f"Calibrated P(Cashout|T)={prob:.2f}. Actual Velocity={features['velocity_5m']}.", "weight": 0.9},
-                {"reason": f"Location Confidence: {loc_conf}.", "weight": 1.0}
-            ],
-            recommended_action="Enhanced monitoring" if loc_conf == "LOW" else "Escalate to LEA patrol",
-            model_version="V1.0 Calibrated"
+        # Step 1: L1 transfer
+        tx1 = Transaction(
+            id=f"TXF_{random.randint(1000,9999)}", timestamp=self.simulation_time,
+            source_account=victim.id, destination_account=mules[0].id,
+            amount=480000, transaction_type="TRANSFER", bank_id=victim.bank_id, risk_signal="HIGH"
         )
-        db.add(pred)
+        db.add(tx1)
         db.commit()
+        self._snapshot_prediction(db, inc.id, mules[0].id)
+        
+        # Advance time by 2 minutes
+        self.simulation_time += datetime.timedelta(minutes=2)
+        
+        # Step 2: L2 Fan-out
+        for m in mules[1:]:
+            tx = Transaction(
+                id=f"TXF_{random.randint(1000,9999)}", timestamp=self.simulation_time,
+                source_account=mules[0].id, destination_account=m.id,
+                amount=480000 / 3, transaction_type="TRANSFER", bank_id=mules[0].bank_id, risk_signal="HIGH"
+            )
+            db.add(tx)
+        db.commit()
+        
+        # Snapshot 2
+        self._snapshot_prediction(db, inc.id, mules[0].id)
+        
+        # Advance time by 5 minutes
+        self.simulation_time += datetime.timedelta(minutes=5)
+        
+        # Snapshot 3 (Evolution)
+        self._snapshot_prediction(db, inc.id, mules[0].id)
         
         await self._broadcast({"type": "ALERT", "data": {"incident_id": inc.id}})
         db.close()
