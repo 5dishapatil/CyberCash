@@ -96,7 +96,7 @@ export default function CommandCentre() {
         </div>
         <div className="bg-slate-800/50 border border-slate-700 p-4 rounded-xl flex items-center justify-between">
           <div>
-            <div className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Precision@5</div>
+            <div className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Precision@5 <span className="text-[10px] text-amber-500/80 lowercase">(demo replay)</span></div>
             <div className="text-3xl text-cyan-400 font-bold font-mono">{stats?.precision_at_5 ? (stats.precision_at_5 * 100).toFixed(1) + '%' : 'N/A'}</div>
           </div>
           <Target className="text-cyan-400/50" size={32} />

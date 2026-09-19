@@ -342,6 +342,16 @@ def get_stats(db: Session = Depends(get_db)):
 def evaluate_incident(incident_id: str, db: Session = Depends(get_db)):
     return compute_incident_evaluation(db, incident_id)
 
+@router.get("/ml/independent-evaluation")
+def get_independent_evaluation():
+    import os
+    import json
+    json_path = os.path.join(os.path.dirname(__file__), "..", "ml", "independent_metrics.json")
+    if os.path.exists(json_path):
+        with open(json_path, "r") as f:
+            return json.load(f)
+    return {"error": "Evaluation not found. Run generate_independent_test_set.py first."}
+
 # --- HEALTH ---
 @router.get("/health")
 def health_check(db: Session = Depends(get_db)):

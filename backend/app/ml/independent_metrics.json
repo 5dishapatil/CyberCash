@@ -1,0 +1,19 @@
+{
+  "dataset_size": {
+    "legit_tested": 100,
+    "fraud_tested": 48,
+    "adversarial_tested": 9,
+    "hard_negative_tested": 10,
+    "total": 167
+  },
+  "evaluation": {
+    "precision_at_1": 0.9552,
+    "precision_at_5": 0.9552,
+    "recall_at_5": 0.9552,
+    "ndcg_at_5": 0.9552,
+    "avg_lead_time": 19.0,
+    "avg_geo_error": 0.41,
+    "avg_calibration_error": 0.2032,
+    "false_positive_rate": 0.1493
+  }
+}
