@@ -9,6 +9,11 @@ import urllib.error
 import datetime
 import math
 
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+except:
+    pass
+
 API_BASE = "http://localhost:8000/api"
 
 def api_get(endpoint, token=None):
@@ -43,7 +48,6 @@ def api_post(endpoint, body=None, token=None):
         except:
             return e.code, body
 
-# Login helper
 def get_token(username, password="demo123"):
     status, res = api_post("/auth/login", {"username": username, "password": password})
     if status == 200:
@@ -52,9 +56,9 @@ def get_token(username, password="demo123"):
 
 results = {}
 
-print("=" * 70)
-print("CYBERCASH SENTINEL — RUNTIME ACCEPTANCE TESTS")
-print("=" * 70)
+print("=" * 70, flush=True)
+print("CYBERCASH SENTINEL — RUNTIME ACCEPTANCE TESTS", flush=True)
+print("=" * 70, flush=True)
 
 # Tokens
 token_i4c = get_token("i4c_analyst")
@@ -63,18 +67,17 @@ token_b0  = get_token("bank_officer")
 token_b1  = get_token("bank_officer_b1")
 token_judge = get_token("judge_admin")
 
-print("[AUTH] Tokens acquired for I4C, LEA, BANK_B0, BANK_B1, JUDGE.")
+print("[AUTH] Tokens acquired for I4C, LEA, BANK_B0, BANK_B1, JUDGE.", flush=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 1 — LEGITIMATE TRANSACTION
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- RUNNING TEST 1: LEGITIMATE TRANSACTION ---")
+print("\n--- RUNNING TEST 1: LEGITIMATE TRANSACTION ---", flush=True)
 try:
     status, res = api_post("/simulation/scenario/2")
     assert status == 200, f"Scenario 2 trigger failed: {res}"
     inc_id = res.get("incident_id")
     
-    # Check incident properties
     status, incs = api_get("/incidents", token_i4c)
     target_inc = next((i for i in incs if i["id"] == inc_id), None)
     assert target_inc is not None, f"Incident {inc_id} not found"
@@ -83,7 +86,6 @@ try:
     assert target_inc["cashout_probability"] < 0.35, f"Expected low prob < 0.35, got {target_inc['cashout_probability']}"
     assert target_inc["status"] == "NEW", f"Expected status NEW, got {target_inc['status']}"
     
-    # Check timeline has 0 notifications
     status, timeline = api_get(f"/incidents/{inc_id}/timeline")
     notifs = [t for t in timeline if t["type"] == "NOTIFICATION"]
     assert len(notifs) == 0, f"Expected 0 notifications for legit remittance, got {len(notifs)}"
@@ -92,15 +94,15 @@ try:
         "status": "PASS",
         "evidence": f"Inc {inc_id}: risk={target_inc['risk_level']}, prob={target_inc['cashout_probability']:.2f}, notifications={len(notifs)}, status={target_inc['status']}"
     }
-    print("  -> PASS:", results["TEST 1 — LEGITIMATE TRANSACTION"]["evidence"])
+    print("  -> PASS:", results["TEST 1 — LEGITIMATE TRANSACTION"]["evidence"], flush=True)
 except Exception as e:
     results["TEST 1 — LEGITIMATE TRANSACTION"] = {"status": "FAIL", "error": str(e), "file": "app/simulator/engine.py", "fix": "Ensure scenario 2 generates LOW risk incident with no notifications."}
-    print("  -> FAIL:", e)
+    print("  -> FAIL:", e, flush=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 2 — CLASSIC FRAUD
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- RUNNING TEST 2: CLASSIC FRAUD ---")
+print("\n--- RUNNING TEST 2: CLASSIC FRAUD ---", flush=True)
 try:
     status, res = api_post("/simulation/scenario/3")
     assert status == 200, f"Scenario 3 trigger failed: {res}"
@@ -112,7 +114,6 @@ try:
     assert target_inc["risk_level"] == "HIGH", f"Expected HIGH risk, got {target_inc['risk_level']}"
     assert target_inc["cashout_probability"] >= 0.50, f"Expected prob >= 0.50, got {target_inc['cashout_probability']}"
     
-    # Check timeline for transactions, predictions, notifications
     status, timeline = api_get(f"/incidents/{inc_id}/timeline")
     txs = [t for t in timeline if t["type"] == "TRANSACTION"]
     preds = [t for t in timeline if t["type"] == "PREDICTION"]
@@ -122,20 +123,16 @@ try:
     assert len(preds) >= 3, f"Expected >=3 predictions (evolution), got {len(preds)}"
     assert len(notifs) >= 5, f"Expected >=5 notification routes, got {len(notifs)}"
     
-    # Check graph
     status, graph = api_get(f"/incidents/{inc_id}/graph")
     assert len(graph["nodes"]) >= 5, f"Expected >=5 nodes in fraud network graph, got {len(graph['nodes'])}"
     assert len(graph["edges"]) >= 4, f"Expected >=4 edges in fraud network graph, got {len(graph['edges'])}"
     
-    # Acknowledge
     status, ack_res = api_post(f"/incidents/{inc_id}/acknowledge")
     assert status == 200, f"Acknowledge failed: {ack_res}"
     
-    # Hold Funds (Intervention)
     status, hold_res = api_post(f"/incidents/{inc_id}/hold_funds")
     assert status == 200 and hold_res.get("status") == "funds_held", f"Hold funds failed: {hold_res}"
     
-    # Check audit log records everything
     status, timeline_after = api_get(f"/incidents/{inc_id}/timeline")
     audits = [t for t in timeline_after if t["type"] == "AUDIT"]
     assert len(audits) >= 2, f"Expected >=2 audit records, got {len(audits)}"
@@ -146,24 +143,23 @@ try:
         "status": "PASS",
         "evidence": f"Inc {inc_id}: txs={len(txs)}, preds={len(preds)}, notifs={len(notifs)}, graph_nodes={len(graph['nodes'])}, funds_held={hold_res['accounts']} accounts, audit_hashes=verified"
     }
-    print("  -> PASS:", results["TEST 2 — CLASSIC FRAUD"]["evidence"])
+    print("  -> PASS:", results["TEST 2 — CLASSIC FRAUD"]["evidence"], flush=True)
 except Exception as e:
     results["TEST 2 — CLASSIC FRAUD"] = {"status": "FAIL", "error": str(e), "file": "app/simulator/engine.py", "fix": "Ensure full classic fraud lifecycle executes and audits correctly."}
-    print("  -> FAIL:", e)
+    print("  -> FAIL:", e, flush=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 3 — 3-MINUTE CASHOUT
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- RUNNING TEST 3: 3-MINUTE CASHOUT (SPATIAL ABSTENTION) ---")
+print("\n--- RUNNING TEST 3: 3-MINUTE CASHOUT (SPATIAL ABSTENTION) ---", flush=True)
 try:
     status, res = api_post("/simulation/scenario/4")
     assert status == 200, f"Scenario 4 trigger failed: {res}"
     inc_id = res.get("incident_id")
     
-    # Check predictions for this incident
     status, preds = api_get(f"/predictions/{inc_id}")
     assert len(preds) > 0, "No predictions found for scenario 4"
-    latest_pred = preds[0]  # ordered desc
+    latest_pred = preds[0]
     
     is_abstained = (latest_pred.get("top_k_terminals") == [] or len(latest_pred.get("top_k_terminals")) == 0)
     conf = latest_pred.get("confidence")
@@ -177,21 +173,19 @@ try:
         "status": "PASS",
         "evidence": f"Inc {inc_id}: top_k_terminals={latest_pred.get('top_k_terminals')}, confidence={conf}, action='{action[:60]}...'"
     }
-    print("  -> PASS:", results["TEST 3 — 3-MINUTE CASHOUT"]["evidence"])
+    print("  -> PASS:", results["TEST 3 — 3-MINUTE CASHOUT"]["evidence"], flush=True)
 except Exception as e:
     results["TEST 3 — 3-MINUTE CASHOUT"] = {"status": "FAIL", "error": str(e), "file": "app/ml/predictor.py", "fix": "Implement abstention when time_window_mins <= 3."}
-    print("  -> FAIL:", e)
+    print("  -> FAIL:", e, flush=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 4 — ATM SWITCHING
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- RUNNING TEST 4: ATM SWITCHING ---")
+print("\n--- RUNNING TEST 4: ATM SWITCHING ---", flush=True)
 try:
-    # Trigger scenario 3 as baseline
     status, res1 = api_post("/simulation/scenario/3?seed=1001")
     inc_id_base = res1.get("incident_id")
     
-    # Trigger scenario 5 (ATM Switching) with same seed
     status, res2 = api_post("/simulation/scenario/5?seed=1001")
     inc_id_switch = res2.get("incident_id")
     
@@ -209,21 +203,19 @@ try:
         "status": "PASS",
         "evidence": f"Baseline terminal={term_base} switched to alternate terminal={term_switch} in Scenario 5."
     }
-    print("  -> PASS:", results["TEST 4 — ATM SWITCHING"]["evidence"])
+    print("  -> PASS:", results["TEST 4 — ATM SWITCHING"]["evidence"], flush=True)
 except Exception as e:
     results["TEST 4 — ATM SWITCHING"] = {"status": "FAIL", "error": str(e), "file": "app/simulator/engine.py", "fix": "Ensure Scenario 5 alters ground truth terminal."}
-    print("  -> FAIL:", e)
+    print("  -> FAIL:", e, flush=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 5 — GEOGRAPHIC SHIFT
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- RUNNING TEST 5: GEOGRAPHIC SHIFT ---")
+print("\n--- RUNNING TEST 5: GEOGRAPHIC SHIFT ---", flush=True)
 try:
-    # Trigger scenario 3 (Center Pune: ~18.5204, 73.8567)
     status, res1 = api_post("/simulation/scenario/3?seed=2001")
     inc_id_pune = res1.get("incident_id")
     
-    # Trigger scenario 6 (North Pune Shift: ~18.6500, 73.7800)
     status, res2 = api_post("/simulation/scenario/6?seed=2001")
     inc_id_north = res2.get("incident_id")
     
@@ -240,38 +232,33 @@ try:
         "status": "PASS",
         "evidence": f"Center Pune candidate top terminal={terms_pune[0]} shifted to North Pune top terminal={terms_north[0]}."
     }
-    print("  -> PASS:", results["TEST 5 — GEOGRAPHIC SHIFT"]["evidence"])
+    print("  -> PASS:", results["TEST 5 — GEOGRAPHIC SHIFT"]["evidence"], flush=True)
 except Exception as e:
     results["TEST 5 — GEOGRAPHIC SHIFT"] = {"status": "FAIL", "error": str(e), "file": "app/ml/predictor.py", "fix": "Support origin_coords in rank_candidate_terminals."}
-    print("  -> FAIL:", e)
+    print("  -> FAIL:", e, flush=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 6 — CROSS-BANK
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- RUNNING TEST 6: CROSS-BANK CASCADE ---")
+print("\n--- RUNNING TEST 6: CROSS-BANK CASCADE ---", flush=True)
 try:
     status, res = api_post("/simulation/scenario/9")
     assert status == 200, f"Scenario 9 trigger failed: {res}"
     inc_id = res.get("incident_id")
     
-    # Check transactions touch multiple banks
     status, timeline = api_get(f"/incidents/{inc_id}/timeline")
     txs = [t for t in timeline if t["type"] == "TRANSACTION"]
     assert len(txs) >= 4, f"Expected >=4 transactions, got {len(txs)}"
     
-    # Verify I4C sees it
     status, incs_i4c = api_get("/incidents", token_i4c)
     assert any(i["id"] == inc_id for i in incs_i4c), "I4C could not see cross-bank incident"
     
-    # Verify Bank B0 sees it (since victim is B0)
     status, incs_b0 = api_get("/incidents", token_b0)
     assert any(i["id"] == inc_id for i in incs_b0), "Bank B0 could not see incident involving B0"
     
-    # Verify Bank B1 sees it (since mule is B1)
     status, incs_b1 = api_get("/incidents", token_b1)
     assert any(i["id"] == inc_id for i in incs_b1), "Bank B1 could not see incident involving B1"
     
-    # Verify LEA sees it in Pune jurisdiction
     status, incs_lea = api_get("/incidents", token_lea)
     assert any(i["id"] == inc_id for i in incs_lea), "LEA could not see incident in jurisdiction"
     
@@ -279,15 +266,15 @@ try:
         "status": "PASS",
         "evidence": f"Inc {inc_id}: Correlated cross-bank flow visible to I4C, Bank B0, Bank B1, and LEA correctly."
     }
-    print("  -> PASS:", results["TEST 6 — CROSS-BANK"]["evidence"])
+    print("  -> PASS:", results["TEST 6 — CROSS-BANK"]["evidence"], flush=True)
 except Exception as e:
     results["TEST 6 — CROSS-BANK"] = {"status": "FAIL", "error": str(e), "file": "app/api/endpoints.py", "fix": "Ensure role-based scoping allows involved banks to see the incident."}
-    print("  -> FAIL:", e)
+    print("  -> FAIL:", e, flush=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 7 — NOTIFICATIONS
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- RUNNING TEST 7: NOTIFICATIONS MULTI-CHANNEL DISPATCH ---")
+print("\n--- RUNNING TEST 7: NOTIFICATIONS MULTI-CHANNEL DISPATCH ---", flush=True)
 try:
     status, res = api_post("/simulation/scenario/3")
     inc_id = res.get("incident_id")
@@ -312,29 +299,25 @@ try:
         "status": "PASS",
         "evidence": f"Dispatched {len(notifs)} alerts across channels: {channels}, recipients: {recipients}, all marked SENT."
     }
-    print("  -> PASS:", results["TEST 7 — NOTIFICATIONS"]["evidence"])
+    print("  -> PASS:", results["TEST 7 — NOTIFICATIONS"]["evidence"], flush=True)
 except Exception as e:
     results["TEST 7 — NOTIFICATIONS"] = {"status": "FAIL", "error": str(e), "file": "app/simulator/notifications.py", "fix": "Ensure all 4 channels (Webhook, Email, SMS, WS) dispatch to I4C, LEA, and Bank."}
-    print("  -> FAIL:", e)
+    print("  -> FAIL:", e, flush=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 8 — SECURITY
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- RUNNING TEST 8: SECURITY & RBAC ENFORCEMENT ---")
+print("\n--- RUNNING TEST 8: SECURITY & RBAC ENFORCEMENT ---", flush=True)
 try:
-    # 1. Unauthorized API call without token -> 401
     status, res = api_post("/security/enforce-control", {})
     assert status == 401, f"Expected 401 without token, got {status}"
     
-    # 2. Bank officer trying administrative simulation control -> 403
     status, res = api_post("/security/enforce-control", {}, token=token_b0)
     assert status == 403, f"Expected 403 for BANK role on admin control, got {status}"
     
-    # 3. Judge executing simulation control -> 200 OK
     status, res = api_post("/security/enforce-control", {}, token=token_judge)
     assert status == 200, f"Expected 200 for JUDGE role, got {status}"
     
-    # 4. Bank scoping test: Bank B0 officer cannot see incidents that belong purely to Bank B1
     status, incs_b0 = api_get("/incidents", token_b0)
     status, incs_b1 = api_get("/incidents", token_b1)
     assert isinstance(incs_b0, list) and isinstance(incs_b1, list), "Incidents list response invalid"
@@ -343,22 +326,20 @@ try:
         "status": "PASS",
         "evidence": "No token -> 401 Unauthorized; Bank officer on admin control -> 403 Forbidden; Judge -> 200 OK; Bank isolation verified."
     }
-    print("  -> PASS:", results["TEST 8 — SECURITY"]["evidence"])
+    print("  -> PASS:", results["TEST 8 — SECURITY"]["evidence"], flush=True)
 except Exception as e:
     results["TEST 8 — SECURITY"] = {"status": "FAIL", "error": str(e), "file": "app/api/endpoints.py", "fix": "Enforce 401 on missing token and 403 on unauthorized roles."}
-    print("  -> FAIL:", e)
+    print("  -> FAIL:", e, flush=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 9 — REPLAY
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- RUNNING TEST 9: DETERMINISTIC REPLAY ---")
+print("\n--- RUNNING TEST 9: DETERMINISTIC REPLAY ---", flush=True)
 try:
     SEED = 9999
-    # Run 1
     status1, res1 = api_post(f"/simulation/scenario/3?seed={SEED}")
     inc_id_1 = res1.get("incident_id")
     
-    # Run 2
     status2, res2 = api_post(f"/simulation/scenario/3?seed={SEED}")
     inc_id_2 = res2.get("incident_id")
     
@@ -379,19 +360,25 @@ try:
     assert preds1 == preds2, f"Prediction probabilities differed: {preds1} vs {preds2}"
     assert inc1["ground_truth_terminal"] == inc2["ground_truth_terminal"], f"Ground truth terminals differed: {inc1['ground_truth_terminal']} vs {inc2['ground_truth_terminal']}"
     
+    # Check evaluation metrics are identical
+    status, ev1 = api_get(f"/evaluation/{inc_id_1}")
+    status, ev2 = api_get(f"/evaluation/{inc_id_2}")
+    assert ev1["precision_at_5"] == ev2["precision_at_5"], "Metrics differed between replays"
+    assert ev1["lead_time_minutes"] == ev2["lead_time_minutes"], "Lead time differed between replays"
+    
     results["TEST 9 — REPLAY"] = {
         "status": "PASS",
-        "evidence": f"Seed {SEED} produced identical transactions {txs1}, identical predictions {preds1}, and identical ground truth {inc1['ground_truth_terminal']}."
+        "evidence": f"Seed {SEED} produced identical transactions {txs1}, identical predictions {preds1}, identical ground truth {inc1['ground_truth_terminal']}, and identical metrics P@5={ev1['precision_at_5']}."
     }
-    print("  -> PASS:", results["TEST 9 — REPLAY"]["evidence"])
+    print("  -> PASS:", results["TEST 9 — REPLAY"]["evidence"], flush=True)
 except Exception as e:
     results["TEST 9 — REPLAY"] = {"status": "FAIL", "error": str(e), "file": "app/simulator/engine.py", "fix": "Use deterministic Random(seed) instance for account, amount, and terminal selection."}
-    print("  -> FAIL:", e)
+    print("  -> FAIL:", e, flush=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 10 — POINT-IN-TIME LEAKAGE
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- RUNNING TEST 10: POINT-IN-TIME LEAKAGE PREVENTION ---")
+print("\n--- RUNNING TEST 10: POINT-IN-TIME LEAKAGE PREVENTION ---", flush=True)
 try:
     from app.db.database import SessionLocal
     from app.models.domain import Transaction, Account
@@ -404,10 +391,8 @@ try:
     
     T0 = datetime.datetime.now()
     
-    # 1. Calculate features and prediction at T0
     prob_before, feats_before, raw_before = predict_cashout(db, account.id, T0)
     
-    # 2. Insert a massive future transaction at T0 + 2 hours
     future_tx = Transaction(
         id=f"TX_FUTURE_{datetime.datetime.now().microsecond}",
         timestamp=T0 + datetime.timedelta(hours=2),
@@ -421,10 +406,8 @@ try:
     db.add(future_tx)
     db.commit()
     
-    # 3. Recalculate features and prediction at T0
     prob_after, feats_after, raw_after = predict_cashout(db, account.id, T0)
     
-    # Clean up test transaction
     db.delete(future_tx)
     db.commit()
     db.close()
@@ -436,17 +419,16 @@ try:
         "status": "PASS",
         "evidence": f"Future transaction (+2h) had zero leakage. Features: {feats_before['amount_5m']} before == {feats_after['amount_5m']} after. Prob: {prob_before:.4f} == {prob_after:.4f}."
     }
-    print("  -> PASS:", results["TEST 10 — POINT-IN-TIME LEAKAGE"]["evidence"])
+    print("  -> PASS:", results["TEST 10 — POINT-IN-TIME LEAKAGE"]["evidence"], flush=True)
 except Exception as e:
     results["TEST 10 — POINT-IN-TIME LEAKAGE"] = {"status": "FAIL", "error": str(e), "file": "app/ml/features.py", "fix": "Strictly enforce timestamp <= simulation_time in all feature queries."}
-    print("  -> FAIL:", e)
+    print("  -> FAIL:", e, flush=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 11 — MODEL TRACE
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- RUNNING TEST 11: MODEL TRACE EXPOSURE ---")
+print("\n--- RUNNING TEST 11: MODEL TRACE EXPOSURE ---", flush=True)
 try:
-    # Trigger a scenario to get a prediction
     status, res = api_post("/simulation/scenario/3")
     inc_id = res.get("incident_id")
     
@@ -476,15 +458,15 @@ try:
         "status": "PASS",
         "evidence": f"Full trace exposed: model={trace['model_version']}, dataset={trace['dataset_version']}, raw_score={trace['raw_score']:.2f}, prob={trace['calibrated_probability']:.4f}, ranking_count={len(trace['terminal_ranking'])}, actual_terminal={trace['actual_terminal']}"
     }
-    print("  -> PASS:", results["TEST 11 — MODEL TRACE"]["evidence"])
+    print("  -> PASS:", results["TEST 11 — MODEL TRACE"]["evidence"], flush=True)
 except Exception as e:
     results["TEST 11 — MODEL TRACE"] = {"status": "FAIL", "error": str(e), "file": "app/api/endpoints.py", "fix": "Add /api/predictions/{id}/trace exposing all 10 required trace fields."}
-    print("  -> FAIL:", e)
+    print("  -> FAIL:", e, flush=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 12 — EVALUATION METRICS
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n--- RUNNING TEST 12: MATHEMATICAL EVALUATION METRICS ---")
+print("\n--- RUNNING TEST 12: MATHEMATICAL EVALUATION METRICS ---", flush=True)
 try:
     status, res = api_post("/simulation/scenario/3")
     inc_id = res.get("incident_id")
@@ -513,22 +495,22 @@ try:
         "status": "PASS",
         "evidence": f"P@1={ev['precision_at_1']}, P@5={ev['precision_at_5']}, Recall@5={ev['recall_at_5']}, NDCG@5={ev['ndcg_at_5']}, LeadTime={ev['lead_time_minutes']}m, GeoErr={ev['geographic_error_km']}km, FP={ev['false_positive_result']}, CalibrationBrier={ev['calibration_error']}."
     }
-    print("  -> PASS:", results["TEST 12 — EVALUATION"]["evidence"])
+    print("  -> PASS:", results["TEST 12 — EVALUATION"]["evidence"], flush=True)
 except Exception as e:
     results["TEST 12 — EVALUATION"] = {"status": "FAIL", "error": str(e), "file": "app/ml/evaluation.py", "fix": "Compute genuine Precision@1, Precision@5, Recall@5, NDCG@5, Lead Time, Geo Error, FP, and Brier Score."}
-    print("  -> FAIL:", e)
+    print("  -> FAIL:", e, flush=True)
 
-print("\n" + "=" * 70)
-print("FINAL SUMMARY REPORT")
-print("=" * 70)
+print("\n" + "=" * 70, flush=True)
+print("FINAL SUMMARY REPORT", flush=True)
+print("=" * 70, flush=True)
 for test_name, res in results.items():
     st = res["status"]
-    print(f"[{st}] {test_name}")
+    print(f"[{st}] {test_name}", flush=True)
     if st == "PASS":
-        print(f"       Evidence: {res['evidence']}")
+        print(f"       Evidence: {res['evidence']}", flush=True)
     else:
-        print(f"       Error: {res['error']}")
-        print(f"       Fix: {res['file']} -> {res['fix']}")
+        print(f"       Error: {res['error']}", flush=True)
+        print(f"       Fix: {res['file']} -> {res['fix']}", flush=True)
 
 with open("test_results.json", "w") as f:
     json.dump(results, f, indent=2)

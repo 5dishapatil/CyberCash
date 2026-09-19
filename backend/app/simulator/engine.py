@@ -96,22 +96,27 @@ class SimulationEngine:
         db = SessionLocal()
         rng = random.Random(seed) if seed is not None else random.Random()
         
-        accounts = db.query(Account).all()
+        accounts = db.query(Account).order_by(Account.id.asc()).all()
         if not accounts or len(accounts) < 6:
             db.close()
             return None
         
-        # Deterministic account picking
+        # Deterministic account picking from ordered accounts list
         actors = rng.sample(accounts, min(8, len(accounts)))
         victim = actors[0]
         mules = actors[1:5]
         
+        if seed is not None:
+            self.simulation_time = datetime.datetime(2026, 6, 1, 10, 0, 0)
+            mule_ids = [m.id for m in mules]
+            db.query(Transaction).filter(Transaction.destination_account.in_(mule_ids), Transaction.risk_signal == "HIGH").delete(synchronize_session=False)
+            db.commit()
+        
         # ── SCENARIO 1: NORMAL ACTIVITY ─────────────────────────────────────
         if scenario_id == 1:
-            # Just a low-value transfer, no incident
             src, dst = rng.sample(accounts, 2)
             tx = Transaction(
-                id=f"TX_{rng.randint(10000000, 99999999)}",
+                id=f"TX_{uuid.uuid4().hex[:8]}",
                 timestamp=self.simulation_time,
                 source_account=src.id, destination_account=dst.id,
                 amount=float(rng.randint(500, 5000)),
@@ -125,8 +130,9 @@ class SimulationEngine:
         # ── SCENARIO 2: LEGIT 10L REMITTANCE ────────────────────────────────
         if scenario_id == 2:
             amt = 1000000.0
+            inc_id = f"INC_{uuid.uuid4().hex[:8]}"
             inc = Incident(
-                id=f"INC_{rng.randint(10000000, 99999999)}",
+                id=inc_id,
                 incident_type="HIGH_VALUE_LEGIT",
                 creation_time=self.simulation_time,
                 trigger_source="SYSTEM",
@@ -137,37 +143,32 @@ class SimulationEngine:
             db.add(inc)
             db.commit()
             
-            # Legitimate single high-value transfer, NO mule cascade
             tx = Transaction(
-                id=f"TX_{rng.randint(10000000, 99999999)}",
+                id=f"TX_{uuid.uuid4().hex[:8]}",
                 timestamp=self.simulation_time,
                 source_account=victim.id, destination_account=mules[0].id,
                 amount=amt, transaction_type="INTERNATIONAL_REMITTANCE",
                 bank_id=victim.bank_id, risk_signal="LOW",
-                incident_id=inc.id
+                incident_id=inc_id
             )
             db.add(tx)
             db.commit()
             
-            # Prediction snapshot: low probability because fan_out=0, prior fraud=0
-            self._snapshot_prediction(db, inc.id, mules[0].id)
-            # Notice: No notifications routed for LOW risk!
+            self._snapshot_prediction(db, inc_id, mules[0].id)
             db.close()
-            return inc.id
+            return inc_id
 
         # ── SCENARIO 6: GEOGRAPHIC SHIFT SETUP ──────────────────────────────
         origin_coords = None
         if scenario_id == 6:
-            # Shift location to North Pune (Nigdi / Pimpri) ~ 18.65, 73.78
-            origin_coords = (18.6500, 73.7800)
+            origin_coords = (18.5800, 73.7800)
 
         # ── SCENARIO 4: 3-MINUTE CASHOUT SETUP ──────────────────────────────
         time_window_mins = 3.0 if scenario_id == 4 else 30.0
 
         # ── SCENARIO 9: CROSS-BANK SETUP ────────────────────────────────────
         if scenario_id == 9:
-            # Force distinct banks for victim, mule 0, mule 1, and ATM
-            banks = db.query(Bank).all()
+            banks = db.query(Bank).order_by(Bank.id.asc()).all()
             if len(banks) >= 4:
                 victim.bank_id = banks[0].id
                 mules[0].bank_id = banks[1].id
@@ -186,7 +187,7 @@ class SimulationEngine:
         }
         amt, inc_type, risk = amounts_map.get(scenario_id, (250000.0, "MULE_CASCADE", "HIGH"))
 
-        inc_id = f"INC_{rng.randint(10000000, 99999999)}"
+        inc_id = f"INC_{uuid.uuid4().hex[:8]}"
         inc = Incident(
             id=inc_id, incident_type=inc_type,
             creation_time=self.simulation_time, trigger_source="SYSTEM",
@@ -197,11 +198,11 @@ class SimulationEngine:
 
         # Route notifications if HIGH risk
         if risk == "HIGH":
-            asyncio.create_task(notification_router.route_incident(inc.id))
+            asyncio.create_task(notification_router.route_incident(inc_id))
 
         # Step 1: L1 transfer
         tx1 = Transaction(
-            id=f"TXF_{rng.randint(10000000, 99999999)}", timestamp=self.simulation_time,
+            id=f"TXF_{uuid.uuid4().hex[:8]}", timestamp=self.simulation_time,
             source_account=victim.id, destination_account=mules[0].id,
             amount=amt, transaction_type="TRANSFER", bank_id=victim.bank_id, risk_signal="HIGH",
             incident_id=inc.id
@@ -217,7 +218,7 @@ class SimulationEngine:
         # Step 2: L2 Fan-out
         for m in mules[1:4]:
             tx = Transaction(
-                id=f"TXF_{rng.randint(10000000, 99999999)}", timestamp=self.simulation_time,
+                id=f"TXF_{uuid.uuid4().hex[:8]}", timestamp=self.simulation_time,
                 source_account=mules[0].id, destination_account=m.id,
                 amount=amt / 3, transaction_type="TRANSFER", bank_id=mules[0].bank_id, risk_signal="HIGH",
                 incident_id=inc.id
@@ -237,29 +238,29 @@ class SimulationEngine:
         term_id = None
         if scenario_id == 5:
             # ATM Switching: Attacker chooses an unexpected terminal not in top-1
-            all_terms = db.query(Terminal).all()
+            all_terms = db.query(Terminal).order_by(Terminal.id.asc()).all()
             if len(all_terms) > 3:
                 term_id = all_terms[3].id
         elif latest_pred and latest_pred.top_k_terminals:
             term_id = latest_pred.top_k_terminals[0]["terminal_id"]
         
         if not term_id:
-            t = db.query(Terminal).first()
+            t = db.query(Terminal).order_by(Terminal.id.asc()).first()
             if t: term_id = t.id
 
         if term_id:
             lead_mins = 3 if scenario_id == 4 else 15
             cashout_time = self.simulation_time + datetime.timedelta(minutes=lead_mins)
             
-            # PROACTIVE INTERVENTION CHECK
-            db.refresh(mules[0])
-            db.refresh(inc)
+            # PROACTIVE INTERVENTION CHECK - use fresh queries to avoid DetachedInstanceError
+            mule_acc = db.query(Account).filter(Account.id == mules[0].id).first()
+            inc_fresh = db.query(Incident).filter(Incident.id == inc.id).first()
             
-            if mules[0].status == "HOLD" or inc.status in ["FUNDS_HELD", "RESOLVED"]:
+            if (mule_acc and mule_acc.status == "HOLD") or (inc_fresh and inc_fresh.status in ["FUNDS_HELD", "RESOLVED"]):
                 print(f"[PROACTIVE INTERVENTION SUCCESS] Blocked withdrawal of {amt} for account {mules[0].id}")
             else:
                 w = Withdrawal(
-                    id=f"WTH_{rng.randint(10000000, 99999999)}", 
+                    id=f"WTH_{uuid.uuid4().hex[:8]}", 
                     timestamp=cashout_time, 
                     terminal_id=term_id, 
                     account_id=mules[0].id, 
@@ -274,7 +275,7 @@ class SimulationEngine:
 
         await self._broadcast({"type": "ALERT", "data": {"incident_id": inc.id}})
         db.close()
-        return inc.id
+        return inc_id
 
     def get_scenarios(self):
         return [
