@@ -43,14 +43,14 @@ export default function MapComponent({ incidents = [], predictions = [], onIncid
                   <React.Fragment key={`${p.id}-${tk.terminal_id}`}>
                     <Circle 
                       center={[tk.lat, tk.lng]} 
-                      pathOptions={{ color: inc.severity === 'critical' ? '#e11d48' : '#ec4899', fillColor: inc.severity === 'critical' ? '#e11d48' : '#ec4899', fillOpacity: 0.2 }} 
-                      radius={300}
+                      pathOptions={{ color: inc.risk_level === 'HIGH' ? '#e11d48' : '#ec4899', fillColor: inc.risk_level === 'HIGH' ? '#e11d48' : '#ec4899', fillOpacity: 0.2 }} 
+                      radius={1000}
                     />
                     <Marker position={[tk.lat, tk.lng]} icon={redIcon} eventHandlers={{ click: () => onIncidentClick && onIncidentClick(inc) }}>
                       <Popup>
-                        <div className="text-black font-mono text-xs">
-                          <strong>Incident {inc.id.substring(0,8)}</strong><br/>
-                          Risk: {inc.severity}<br/>
+                        <div className="text-xs bg-slate-900 text-white p-2 rounded border border-slate-700">
+                          <strong className="text-cyan-400">Incident: {inc.id.substring(0,8)}</strong><br/>
+                          Risk: {inc.risk_level}<br/>
                           Location Risk: {(tk.prob * 100).toFixed(1)}%<br/>
                         </div>
                       </Popup>
