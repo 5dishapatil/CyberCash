@@ -88,7 +88,7 @@ class SimulationEngine:
         db.commit()
         return pred
 
-    async def trigger_fraud_cascade(self, scenario_id=3, seed=None):
+    async def trigger_fraud_cascade(self, scenario_id=3, seed=None, clear_db=True):
         """
         Executes a deterministic or dynamic scenario based on scenario_id.
         Accepts optional seed for reproducible replays.
@@ -106,7 +106,7 @@ class SimulationEngine:
         victim = actors[0]
         mules = actors[1:5]
         
-        if seed is not None:
+        if seed is not None and clear_db:
             # Deterministic simulation time window
             self.simulation_time = datetime.datetime(2026, 6, 1, 10, 0, 0)
             # Clear replay window so Run 2 executes on clean baseline
