@@ -19,14 +19,16 @@ def predict_cashout(db: Session, account_id: str, simulation_time):
     fan_out     = features.get("fan_out", 0)
     acc_age     = features.get("acc_age", 365)
 
-    # Feature 1: Velocity signal - rapid inbound transactions in 5 min
-    f1 = min(1.0, velocity_5m / 5.0)
+    # Feature 1: Velocity signal - burst requires >= 2 transactions in 5 min
+    if velocity_5m <= 1:
+        f1 = 0.0
+    else:
+        f1 = min(1.0, (velocity_5m - 1) / 4.0)
 
     # Feature 2: High inbound amount in 5 min
-    # If there is no mule fan-out (fan_out == 0) and low velocity (velocity_5m <= 1),
-    # an isolated large amount is a normal legitimate remittance, not a mule cascade.
+    # An isolated single remittance with 0 fan-out and 0 velocity burst is not a mule cascade
     if fan_out == 0 and velocity_5m <= 1:
-        f2 = 0.05 * min(1.0, amount_5m / 500000.0)
+        f2 = 0.0
     else:
         f2 = min(1.0, amount_5m / 500000.0)
 
