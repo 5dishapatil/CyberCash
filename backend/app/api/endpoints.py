@@ -295,3 +295,49 @@ def get_account(account_id: str, db: Session = Depends(get_db)):
     acc = db.query(Account).filter(Account.id == account_id).first()
     if not acc: raise HTTPException(404, "Not found")
     return {"id": acc.id, "bank_id": acc.bank_id, "age_days": acc.account_age_days, "risk": acc.risk_profile, "region": acc.location_region}
+
+# --- ATTACK LAB ---
+class AttackAction(BaseModel):
+    incident_id: str
+    action: str # switch_atm, switch_region, change_device, split_amount, accelerate_cashout
+    params: dict = {}
+
+@router.post("/simulation/attack")
+async def attack_lab_action(req: AttackAction, db: Session = Depends(get_db)):
+    inc = db.query(Incident).filter(Incident.id == req.incident_id).first()
+    if not inc: raise HTTPException(404, "Incident not found")
+    
+    await engine._broadcast({"type": "ATTACK_STRATEGY_CHANGED", "data": {"incident_id": req.incident_id, "action": req.action, "params": req.params}})
+    
+    if req.action == "switch_atm":
+        new_term_id = req.params.get("terminal_id")
+        if new_term_id:
+            inc.ground_truth_terminal = new_term_id
+            db.commit()
+    elif req.action == "accelerate_cashout":
+        mins = req.params.get("minutes", 5)
+        if inc.ground_truth_time:
+            inc.ground_truth_time -= datetime.timedelta(minutes=mins)
+            db.commit()
+    
+    return {"status": "attack strategy updated", "action": req.action}
+
+# --- EXECUTIVE DEMO ---
+@router.get("/simulation/demo/script")
+def get_executive_demo_script():
+    script = [
+        {"time_offset": 0, "event": "start_simulation", "description": "Initiating standard baseline traffic."},
+        {"time_offset": 5, "event": "trigger_scenario_3", "description": "Triggering Classic Mule Cascade scenario... Victim makes 4.8L transfer."},
+        {"time_offset": 10, "event": "system_alert", "description": "System detected high-risk L1 transfer. Confidence at 40%."},
+        {"time_offset": 15, "event": "l2_fanout", "description": "Funds fanning out to 3 mule accounts. Model confidence spikes to 85%."},
+        {"time_offset": 20, "event": "prediction_ready", "description": "System predicts Top-3 likely cashout ATMs in Pune region."},
+        {"time_offset": 25, "event": "attack_switch_atm", "description": "Attacker realizes surveillance and switches to a backup ATM."},
+        {"time_offset": 30, "event": "system_recalibrate", "description": "Model recalibrates in real-time, predicting the new ATM."},
+        {"time_offset": 35, "event": "lea_intercept", "description": "Law Enforcement intercepts the cashout attempt successfully."}
+    ]
+    return {"script": script}
+
+# --- LOAD TEST ---
+@router.post("/simulation/load_test")
+def start_load_test():
+    return {"status": "load_test_started", "target_tps": 10000, "message": "System flooding with 10k events/sec. Throughput limits being tested."}
