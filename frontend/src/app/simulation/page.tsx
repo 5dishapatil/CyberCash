@@ -61,27 +61,30 @@ export default function SimulationLab() {
   useEffect(() => {
     if (!demoRunning) return;
     const interval = setInterval(() => {
-      setDemoTime(prev => {
-        const nextTime = prev + 1;
-        const matchingStep = (demoScript || []).findIndex(s => s.time_offset === nextTime);
-        if (matchingStep !== -1) {
-          setDemoStep(matchingStep);
-          const step = demoScript[matchingStep];
-          addToast(step.description, 'info');
-          if (step.event === 'trigger_scenario_3') {
-            triggerScenario(3);
-          } else if (step.event === 'attack_switch_atm') {
-            triggerAttack('switch_atm');
-          }
-        }
-        if (nextTime > (demoScript[demoScript.length-1]?.time_offset || 60) + 5) {
-          setDemoRunning(false);
-        }
-        return nextTime;
-      });
+      setDemoTime(prev => prev + 1);
     }, 1000);
     return () => clearInterval(interval);
-  }, [demoRunning, demoScript]);
+  }, [demoRunning]);
+
+  useEffect(() => {
+    if (!demoRunning) return;
+    const matchingStep = (demoScript || []).findIndex(s => s.time_offset === demoTime);
+    if (matchingStep !== -1 && matchingStep !== demoStep) {
+      setDemoStep(matchingStep);
+      const step = demoScript[matchingStep];
+      addToast(step.description, 'info');
+      if (step.event === 'trigger_scenario_3') {
+        // We do not call triggerScenario directly here to avoid opening the modal during automated demo
+        // Just simulate the event in the background for the demo
+        fetch(`http://localhost:8000/api/simulation/scenario/3`, { method: 'POST' }).catch(console.error);
+      } else if (step.event === 'attack_switch_atm') {
+        triggerAttack('switch_atm');
+      }
+    }
+    if (demoTime > (demoScript[demoScript.length-1]?.time_offset || 60) + 5) {
+      setDemoRunning(false);
+    }
+  }, [demoTime, demoRunning, demoScript, demoStep, addToast]);
 
   const startDemo = () => {
     setDemoTime(0);
