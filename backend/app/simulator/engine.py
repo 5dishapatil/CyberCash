@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 import random
 import datetime
@@ -41,7 +42,7 @@ class SimulationEngine:
         amount = random.uniform(100, 10000)
         
         tx = Transaction(
-            id=f"TX{random.randint(100000,999999)}",
+            id=f"TX_{uuid.uuid4().hex[:8]}",
             timestamp=self.simulation_time, source_account=src.id, destination_account=dst.id,
             amount=amount, transaction_type="TRANSFER", bank_id=src.bank_id, risk_signal="LOW"
         )
@@ -55,7 +56,7 @@ class SimulationEngine:
         radius_km = (max_travel_time / 60.0) * 30.0 if max_travel_time > 0 else 10.0
         
         pred = Prediction(
-            id=f"PRD_{random.randint(10000,99999)}", incident_id=inc_id,
+            id=f"PRD_{uuid.uuid4().hex[:8]}", incident_id=inc_id,
             timestamp=self.simulation_time, cashout_probability=prob,
             estimated_time_window_start=self.simulation_time + datetime.timedelta(minutes=5),
             estimated_time_window_end=self.simulation_time + datetime.timedelta(minutes=30),
@@ -73,14 +74,16 @@ class SimulationEngine:
         db.commit()
 
     async def trigger_fraud_cascade(self, seed=42):
-        random.seed(seed)
+        # We don't seed global random to prevent ID collisions, 
+        # or we just use uuid for IDs explicitly.
         db = SessionLocal()
         accounts = db.query(Account).limit(10).all()
+        if not accounts: return
         victim = accounts[0]
         mules = accounts[1:5]
         
         inc = Incident(
-            id=f"INC_{random.randint(1000,9999)}", incident_type="MULE_CASCADE",
+            id=f"INC_{uuid.uuid4().hex[:8]}", incident_type="MULE_CASCADE",
             creation_time=self.simulation_time, trigger_source="SYSTEM",
             amount_at_risk=480000, risk_level="HIGH", status="NEW"
         )
@@ -89,7 +92,7 @@ class SimulationEngine:
         
         # Step 1: L1 transfer
         tx1 = Transaction(
-            id=f"TXF_{random.randint(1000,9999)}", timestamp=self.simulation_time,
+            id=f"TXF_{uuid.uuid4().hex[:8]}", timestamp=self.simulation_time,
             source_account=victim.id, destination_account=mules[0].id,
             amount=480000, transaction_type="TRANSFER", bank_id=victim.bank_id, risk_signal="HIGH"
         )
@@ -103,7 +106,7 @@ class SimulationEngine:
         # Step 2: L2 Fan-out
         for m in mules[1:]:
             tx = Transaction(
-                id=f"TXF_{random.randint(1000,9999)}", timestamp=self.simulation_time,
+                id=f"TXF_{uuid.uuid4().hex[:8]}", timestamp=self.simulation_time,
                 source_account=mules[0].id, destination_account=m.id,
                 amount=480000 / 3, transaction_type="TRANSFER", bank_id=mules[0].bank_id, risk_signal="HIGH"
             )
