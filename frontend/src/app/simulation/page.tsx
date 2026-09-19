@@ -1,12 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { FlaskConical, Play, Pause, RefreshCw, AlertCircle, Calendar, Zap, Terminal } from 'lucide-react';
-import { useNotifications } from '../store/notifications';
+import { useNotificationStore } from '../store/notifications';
 
 export default function SimulationLab() {
   const [activeTab, setActiveTab] = useState('judge');
   const [scenarios, setScenarios] = useState<any[]>([]);
-  const { addNotification } = useNotifications();
+  const addToast = useNotificationStore(state => state.addToast);
   const [demoScript, setDemoScript] = useState<any[]>([]);
   const [demoStep, setDemoStep] = useState<number>(-1);
   const [demoRunning, setDemoRunning] = useState(false);
@@ -27,9 +27,9 @@ export default function SimulationLab() {
   const triggerScenario = async (id: number) => {
     try {
       await fetch(`http://localhost:8000/api/simulation/scenario/${id}`, { method: 'POST' });
-      addNotification({ title: 'Scenario Triggered', message: `Scenario ${id} has been injected into the engine.`, type: 'info' });
+      addToast(`Scenario ${id} has been injected into the engine.`, 'info');
     } catch (e) {
-      addNotification({ title: 'Error', message: 'Failed to trigger scenario.', type: 'error' });
+      addToast('Failed to trigger scenario.', 'error');
     }
   };
 
@@ -39,7 +39,7 @@ export default function SimulationLab() {
       const r = await fetch('http://localhost:8000/api/incidents');
       const incs = await r.json();
       if (incs.length === 0) {
-        addNotification({ title: 'Warning', message: 'No active incident to attack. Run a scenario first.', type: 'warning' });
+        addToast('No active incident to attack. Run a scenario first.', 'warning');
         return;
       }
       const inc = incs[0];
@@ -49,7 +49,7 @@ export default function SimulationLab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ incident_id: inc.id, action: action, params: { minutes: 5 } })
       });
-      addNotification({ title: 'Attack Executed', message: `Attacker strategy shifted: ${action}`, type: 'error' });
+      addToast(`Attacker strategy shifted: ${action}`, 'error');
     } catch (e) {
       console.error(e);
     }
@@ -64,7 +64,7 @@ export default function SimulationLab() {
         if (matchingStep !== -1) {
           setDemoStep(matchingStep);
           const step = demoScript[matchingStep];
-          addNotification({ title: 'Demo Event', message: step.description, type: 'info' });
+          addToast(step.description, 'info');
           if (step.event === 'trigger_scenario_3') {
             triggerScenario(3);
           } else if (step.event === 'attack_switch_atm') {
@@ -84,7 +84,7 @@ export default function SimulationLab() {
     setDemoTime(0);
     setDemoStep(-1);
     setDemoRunning(true);
-    addNotification({ title: 'Executive Demo Started', message: 'The deterministic simulation has begun.', type: 'success' });
+    addToast('The deterministic simulation has begun.', 'success');
   };
 
   return (

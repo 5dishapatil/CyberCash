@@ -167,16 +167,16 @@ export default function CommandCentre() {
           {simulation?.simulation_time ? new Date(simulation.simulation_time).toISOString().replace('T', ' ').substring(0, 19) : '2025-03-01 14:00:00'}
         </div>
         <div className="flex items-center gap-2 pr-2">
-          <button onClick={() => fetch('http://localhost:8000/api/simulation/reset', {method:'POST'}).then(fetchData)} className="p-1.5 hover:bg-slate-800 rounded-full text-slate-300 hover:text-white transition-colors"><RotateCcw size={16} /></button>
+          <button onClick={() => fetch('http://localhost:8000/api/simulation/reset', {method:'POST'}).then(() => window.location.reload())} className="p-1.5 hover:bg-slate-800 rounded-full text-slate-300 hover:text-white transition-colors"><RotateCcw size={16} /></button>
           {simulation?.status === 'RUNNING' ? (
-            <button onClick={() => fetch('http://localhost:8000/api/simulation/pause', {method:'POST'}).then(fetchData)} className="p-1.5 hover:bg-slate-800 rounded-full text-slate-300 hover:text-white transition-colors"><Pause size={16} /></button>
+            <button onClick={() => fetch('http://localhost:8000/api/simulation/pause', {method:'POST'}).then(() => window.location.reload())} className="p-1.5 hover:bg-slate-800 rounded-full text-slate-300 hover:text-white transition-colors"><Pause size={16} /></button>
           ) : (
-            <button onClick={() => fetch('http://localhost:8000/api/simulation/start', {method:'POST'}).then(fetchData)} className="p-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 rounded-full text-cyan-400 transition-colors"><Play size={16} fill="currentColor" /></button>
+            <button onClick={() => fetch('http://localhost:8000/api/simulation/start', {method:'POST'}).then(() => window.location.reload())} className="p-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 rounded-full text-cyan-400 transition-colors"><Play size={16} fill="currentColor" /></button>
           )}
           <select 
             value={simulation?.speed || 1}
             onChange={(e) => {
-              fetch(`http://localhost:8000/api/simulation/speed?speed=${e.target.value}`, {method:'POST'}).then(fetchData);
+              fetch(`http://localhost:8000/api/simulation/speed?speed=${e.target.value}`, {method:'POST'}).then(() => window.location.reload());
             }}
             className="bg-slate-800 text-xs text-white border-none rounded px-2 py-1 ml-2 outline-none">
             <option value="1">1x</option>
