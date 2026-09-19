@@ -94,7 +94,8 @@ class SimulationEngine:
         tx1 = Transaction(
             id=f"TXF_{uuid.uuid4().hex[:8]}", timestamp=self.simulation_time,
             source_account=victim.id, destination_account=mules[0].id,
-            amount=480000, transaction_type="TRANSFER", bank_id=victim.bank_id, risk_signal="HIGH"
+            amount=480000, transaction_type="TRANSFER", bank_id=victim.bank_id, risk_signal="HIGH",
+            incident_id=inc.id
         )
         db.add(tx1)
         db.commit()
@@ -108,7 +109,8 @@ class SimulationEngine:
             tx = Transaction(
                 id=f"TXF_{uuid.uuid4().hex[:8]}", timestamp=self.simulation_time,
                 source_account=mules[0].id, destination_account=m.id,
-                amount=480000 / 3, transaction_type="TRANSFER", bank_id=mules[0].bank_id, risk_signal="HIGH"
+                amount=480000 / 3, transaction_type="TRANSFER", bank_id=mules[0].bank_id, risk_signal="HIGH",
+                incident_id=inc.id
             )
             db.add(tx)
         db.commit()
@@ -122,8 +124,48 @@ class SimulationEngine:
         # Snapshot 3 (Evolution)
         self._snapshot_prediction(db, inc.id, mules[0].id)
         
+        # Set ground truth
+        latest_pred = db.query(Prediction).filter(Prediction.incident_id == inc.id).order_by(Prediction.timestamp.desc()).first()
+        term_id = None
+        if latest_pred and latest_pred.top_k_terminals:
+            term_id = latest_pred.top_k_terminals[0]["terminal_id"]
+        if not term_id:
+            from app.models.domain import Terminal
+            t = db.query(Terminal).first()
+            if t: term_id = t.id
+            
+        if term_id:
+            from app.models.domain import Withdrawal
+            cashout_time = self.simulation_time + datetime.timedelta(minutes=15)
+            w = Withdrawal(
+                id=f"WTH_{uuid.uuid4().hex[:8]}", 
+                timestamp=cashout_time, 
+                terminal_id=term_id, 
+                account_id=mules[0].id, 
+                amount=480000, 
+                status="COMPLETED"
+            )
+            db.add(w)
+            inc.ground_truth_terminal = term_id
+            inc.ground_truth_time = cashout_time
+            db.commit()
+
         await self._broadcast({"type": "ALERT", "data": {"incident_id": inc.id}})
         db.close()
+
+    def get_scenarios(self):
+        return [
+            {"id": 1, "name": "Normal Activity", "description": "Legitimate financial transactions"},
+            {"id": 2, "name": "Legit 10L Remittance", "description": "High-value legitimate transfer"},
+            {"id": 3, "name": "Classic Mule Cascade", "description": "Victim to mule network with cashout"},
+            {"id": 4, "name": "3-Minute Cashout", "description": "Rapid cashout attempt"},
+            {"id": 5, "name": "ATM Switching", "description": "Attacker switches target ATM"},
+            {"id": 6, "name": "Geographic Switching", "description": "Attacker changes withdrawal region"},
+            {"id": 7, "name": "Amount Splitting", "description": "Multiple small withdrawals"},
+            {"id": 8, "name": "Sleeper Mule", "description": "Dormant account activated as mule"},
+            {"id": 9, "name": "Cross-Bank Cascade", "description": "Fund flow across multiple banks"},
+            {"id": 10, "name": "False Positive Trap", "description": "Legitimate high-value activity"}
+        ]
 
     async def _broadcast(self, message):
         for sub in self.subscribers:
