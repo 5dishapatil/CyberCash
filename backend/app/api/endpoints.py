@@ -255,6 +255,13 @@ def health_check(db: Session = Depends(get_db)):
         db_healthy = True
     except:
         db_healthy = False
+    
+    db_size_mb = 0
+    if os.path.exists("cybercash.db"):
+        db_size_mb = os.path.getsize("cybercash.db") / (1024 * 1024)
+        
+    queue_depth = len(engine.subscribers)
+    
     return {
         "event_ingestion": "HEALTHY" if engine.running else "IDLE",
         "correlation_engine": "HEALTHY",
@@ -265,7 +272,9 @@ def health_check(db: Session = Depends(get_db)):
         "audit": "HEALTHY",
         "model_version": "V1.0 Calibrated" if model_exists else "MISSING",
         "simulation_time": engine.simulation_time.isoformat() if engine.simulation_time else None,
-        "simulation_status": "RUNNING" if engine.running else "PAUSED"
+        "simulation_status": "RUNNING" if engine.running else "PAUSED",
+        "db_size_mb": round(db_size_mb, 2),
+        "queue_depth": queue_depth
     }
 
 # --- AUDIT ---
