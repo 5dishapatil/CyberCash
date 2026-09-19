@@ -143,7 +143,8 @@ class SimulationEngine:
                 terminal_id=term_id, 
                 account_id=mules[0].id, 
                 amount=480000, 
-                status="COMPLETED"
+                fraud_label=True,
+                incident_id=inc.id
             )
             db.add(w)
             inc.ground_truth_terminal = term_id
