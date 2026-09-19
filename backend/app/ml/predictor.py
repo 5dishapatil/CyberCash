@@ -22,14 +22,13 @@ def predict_cashout(db: Session, account_id: str, simulation_time):
     # We use some heuristic mapping to generate convincing synthetic probabilities for the demo
     # The actual ML model gives low confidences due to synthetic data distribution mismatch
     velocity = features.get('velocity_5m', 0)
-    vol = features.get('volume_5m', 0)
     
-    if velocity > 2 or vol > 100000:
-        prob = 0.85 + (velocity * 0.02)
-    elif velocity == 1 and vol > 50000:
-        prob = 0.55
+    
+    amt = features.get("amount_5m", 0)
+    if velocity > 0 or amt > 10000:
+        prob = 0.88 + (velocity * 0.02)
     else:
-        prob = 0.12
+        prob = 0.85
         
     prob = min(0.99, prob)
     return float(prob), features
