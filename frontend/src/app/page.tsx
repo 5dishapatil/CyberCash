@@ -86,7 +86,7 @@ export default function CommandCentre() {
       <div className="flex gap-4 overflow-x-auto pb-2 shrink-0 hide-scrollbar">
         <KPICard title="Live Event Rate" value={stats?.events_per_second || '24.5'} suffix="/sec" icon={Activity} color="text-cyan-400" trend="+2.4%" />
         <KPICard title="Active Incidents" value={stats?.active_incidents || sortedIncidents.length || 0} icon={AlertTriangle} color="text-rose-400" />
-        <KPICard title="Critical Incidents" value={sortedIncidents.filter(i => i.severity === 'critical').length || 0} icon={Zap} color="text-rose-500" />
+        <KPICard title="Critical Incidents" value={sortedIncidents.filter(i => i.risk_level === 'HIGH').length || 0} icon={Zap} color="text-rose-500" />
         <KPICard title="Amount at Risk" value={formatCurrency(stats?.amount_at_risk || 45000000)} icon={TrendingUp} color="text-amber-400" />
         <KPICard title="Avg Lead Time" value={stats?.avg_lead_time_minutes || '45'} suffix="m" icon={Clock} color="text-emerald-400" />
         <KPICard title="Top-5 Hit Rate" value={((stats?.precision_at_5 || 0.85) * 100).toFixed(1)} suffix="%" icon={Target} color="text-cyan-400" />
@@ -119,12 +119,12 @@ export default function CommandCentre() {
                   <div className="flex justify-between items-start mb-2">
                     <span className="font-mono text-xs text-cyan-400">{inc.id.substring(0,8)}</span>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-bold ${
-                      inc.severity === 'critical' ? 'bg-rose-500/20 text-rose-400' :
-                      inc.severity === 'high' ? 'bg-amber-500/20 text-amber-400' :
+                      inc.risk_level === 'HIGH' ? 'bg-rose-500/20 text-rose-400' :
+                      inc.risk_level === 'MEDIUM' ? 'bg-amber-500/20 text-amber-400' :
                       'bg-emerald-500/20 text-emerald-400'
-                    }`}>{inc.severity}</span>
+                    }`}>{inc.risk_level}</span>
                   </div>
-                  <div className="text-sm text-white mb-2">{inc.type.replace('_', ' ')}</div>
+                  <div className="text-sm text-white mb-2">{inc.incident_type ? inc.incident_type.replace('_', ' ') : 'UNKNOWN'}</div>
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-400">Prob: <span className="text-white font-mono">{(inc.cashout_probability * 100).toFixed(0)}%</span></span>
                     <span className="text-slate-400">Amt: <span className="text-white font-mono">{formatCurrency(inc.amount_at_risk)}</span></span>
