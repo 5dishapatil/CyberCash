@@ -1,91 +1,66 @@
 'use client';
-import { Activity, Server, Cpu, Database, Network } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Activity, Database, Server, Wifi, Cpu, HardDrive } from 'lucide-react';
 
 export default function SystemHealth() {
   const [health, setHealth] = useState<any>(null);
-
+  
   useEffect(() => {
-    fetch('http://localhost:8000/api/health')
-      .then(res => res.json())
-      .then(data => setHealth(data))
-      .catch(e => {
-        // Fallback mock if API fails
-        setHealth({
-          status: 'healthy',
-          services: {
-            simulation_engine: { status: 'healthy', latency: 12 },
-            redis_store: { status: 'healthy', latency: 2 },
-            kafka_stream: { status: 'healthy', latency: 8 },
-            prediction_api: { status: 'healthy', latency: 45 }
-          },
-          system_metrics: { cpu: 42, memory: 68, disk: 34 }
-        });
-      });
+    const fetchHealth = () => fetch('http://localhost:8000/api/health').then(r => r.json()).then(setHealth);
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 3000);
+    return () => clearInterval(interval);
   }, []);
 
-  if (!health) return <div className="p-6 text-slate-500">Checking system vitals...</div>;
+  const renderStatus = (status: string) => {
+    if (status === 'HEALTHY' || status === 'RUNNING') return <span className="text-emerald-400 font-bold bg-emerald-400/10 px-2 py-1 rounded">{status}</span>;
+    if (status === 'DEGRADED') return <span className="text-amber-400 font-bold bg-amber-400/10 px-2 py-1 rounded">{status}</span>;
+    return <span className="text-slate-400 font-bold bg-slate-400/10 px-2 py-1 rounded">{status}</span>;
+  };
 
   return (
-    <div className="flex h-full flex-col p-6 gap-6 relative">
-      <div className="flex justify-between items-center pb-4 border-b border-slate-800">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Activity className="text-cyan-400" />
-            System Health & Diagnostics
-          </h1>
-        </div>
-        <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg font-medium flex items-center gap-2">
-          <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
-          ALL SYSTEMS NOMINAL
-        </div>
+    <div className="p-6 h-full flex flex-col gap-6">
+      <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+        <Activity className="text-emerald-400" size={28} />
+        <h1 className="text-2xl font-bold text-white">System Diagnostics</h1>
       </div>
 
       <div className="grid grid-cols-3 gap-6">
         <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Cpu className="text-slate-400" />
-            <h3 className="text-white font-medium">CPU Utilization</h3>
-          </div>
-          <div className="text-3xl font-mono text-white mb-2">{health.system_metrics?.cpu || 0}%</div>
-          <div className="w-full bg-slate-900 rounded-full h-2"><div className="bg-cyan-500 h-2 rounded-full transition-all" style={{width: `${health.system_metrics?.cpu || 0}%`}}></div></div>
-        </div>
-        
-        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Server className="text-slate-400" />
-            <h3 className="text-white font-medium">Memory Usage</h3>
-          </div>
-          <div className="text-3xl font-mono text-white mb-2">{health.system_metrics?.memory || 0}%</div>
-          <div className="w-full bg-slate-900 rounded-full h-2"><div className="bg-amber-500 h-2 rounded-full transition-all" style={{width: `${health.system_metrics?.memory || 0}%`}}></div></div>
+           <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2"><Server size={20} className="text-cyan-400"/> Core Microservices</h3>
+           <div className="space-y-4">
+             <div className="flex justify-between items-center"><span className="text-slate-300">Event Ingestion</span> {renderStatus(health?.event_ingestion || 'UNKNOWN')}</div>
+             <div className="flex justify-between items-center"><span className="text-slate-300">Correlation Engine</span> {renderStatus(health?.correlation_engine || 'UNKNOWN')}</div>
+             <div className="flex justify-between items-center"><span className="text-slate-300">Prediction Engine</span> {renderStatus(health?.prediction_engine || 'UNKNOWN')}</div>
+             <div className="flex justify-between items-center"><span className="text-slate-300">Spatial Engine</span> {renderStatus(health?.spatial_engine || 'UNKNOWN')}</div>
+           </div>
         </div>
 
         <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Database className="text-slate-400" />
-            <h3 className="text-white font-medium">Storage Capacity</h3>
-          </div>
-          <div className="text-3xl font-mono text-white mb-2">{health.system_metrics?.disk || 0}%</div>
-          <div className="w-full bg-slate-900 rounded-full h-2"><div className="bg-cyan-500 h-2 rounded-full transition-all" style={{width: `${health.system_metrics?.disk || 0}%`}}></div></div>
+           <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2"><Database size={20} className="text-indigo-400"/> Data Persistence</h3>
+           <div className="space-y-4">
+             <div className="flex justify-between items-center"><span className="text-slate-300">Database Status</span> {renderStatus(health?.database || 'UNKNOWN')}</div>
+             <div className="flex justify-between items-center"><span className="text-slate-300">Database Size</span> <span className="font-mono text-white">{health?.db_size_mb || 0} MB</span></div>
+             <div className="flex justify-between items-center"><span className="text-slate-300">Queue Depth</span> <span className="font-mono text-white">{health?.queue_depth || 0}</span></div>
+           </div>
         </div>
-      </div>
 
-      <h2 className="text-lg font-semibold text-white mt-4">Microservices Status</h2>
-      <div className="grid grid-cols-2 gap-4">
-        {health.services && Object.entries(health.services).map(([key, val]: [string, any]) => (
-          <div key={key} className="bg-slate-900 border border-slate-700 p-4 rounded-lg flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <Network className="text-slate-500" size={18} />
-              <span className="text-white font-medium capitalize">{key.replace('_', ' ')}</span>
-            </div>
-            <div className="flex items-center gap-4 text-sm">
-              <span className="text-slate-400 font-mono">{val.latency}ms</span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${val.status === 'healthy' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                {val.status}
-              </span>
-            </div>
-          </div>
-        ))}
+        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 flex flex-col justify-between">
+           <div>
+             <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2"><Cpu size={20} className="text-rose-400"/> Model Status</h3>
+             <p className="text-sm text-slate-400 mb-4">Currently loaded T-GNN model in memory.</p>
+             <div className="bg-slate-900 border border-slate-700 p-4 rounded-lg">
+                <div className="text-slate-400 text-xs mb-1">Active Version</div>
+                <div className="text-cyan-400 font-mono font-bold text-lg">{health?.model_version || 'Loading...'}</div>
+             </div>
+           </div>
+           
+           <div className="mt-4 pt-4 border-t border-slate-700">
+             <div className="text-slate-400 text-xs mb-1">Simulation Time (IST)</div>
+             <div className="text-white font-mono">{health?.simulation_time ? new Date(health.simulation_time).toLocaleString() : 'Loading...'}</div>
+             <div className="mt-2 text-xs">{renderStatus(health?.simulation_status || 'UNKNOWN')}</div>
+           </div>
+        </div>
       </div>
     </div>
   );

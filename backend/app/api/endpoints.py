@@ -341,3 +341,8 @@ def get_executive_demo_script():
 @router.post("/simulation/load_test")
 def start_load_test():
     return {"status": "load_test_started", "target_tps": 10000, "message": "System flooding with 10k events/sec. Throughput limits being tested."}
+
+@router.get('/predictions')
+def get_all_predictions(db: Session = Depends(get_db)):
+    preds = db.query(Prediction).order_by(Prediction.timestamp.desc()).limit(100).all()
+    return [{'id': p.id, 'incident_id': p.incident_id, 'timestamp': p.timestamp.isoformat(), 'prob': p.cashout_probability, 'region': p.predicted_region_h3} for p in preds]
