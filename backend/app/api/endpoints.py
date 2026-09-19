@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Header, BackgroundTasks, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 from app.db.database import get_db
@@ -26,8 +27,45 @@ def get_terminals(db: Session = Depends(get_db)):
     return db.query(Terminal).limit(50).all()
 
 @router.get("/incidents")
-def get_incidents(db: Session = Depends(get_db)):
-    incs = db.query(Incident).order_by(Incident.creation_time.desc()).all()
+def get_incidents(db: Session = Depends(get_db), authorization: Optional[str] = Header(None)):
+    from fastapi import Header
+    import jwt
+    JWT_SECRET = "cybercash-sentinel-demo-secret-key"
+    
+    q = db.query(Incident)
+    
+    # Role-based scoping: BANK officers only see incidents for their bank
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            token = authorization.split(" ")[1]
+            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            role = payload.get("role", "")
+            user_id = payload.get("user_id", "")
+            user = db.query(User).filter(User.id == user_id).first()
+            
+            if role == "BANK" and user and user.bank_id:
+                bank_inc_ids = [row[0] for row in db.query(Transaction.incident_id).filter(
+                    Transaction.bank_id == user.bank_id,
+                    Transaction.incident_id != None
+                ).distinct().all()]
+                if bank_inc_ids:
+                    q = q.filter(Incident.id.in_(bank_inc_ids))
+                else:
+                    return []
+            elif role == "LEA":
+                # LEA officers see incidents in their jurisdiction (PUNE)
+                lea_inc_ids = [row[0] for row in db.query(Transaction.incident_id).join(
+                    Account, Transaction.destination_account == Account.id
+                ).filter(
+                    Account.location_region == "PUNE",
+                    Transaction.incident_id != None
+                ).distinct().all()]
+                if lea_inc_ids:
+                    q = q.filter(Incident.id.in_(lea_inc_ids))
+        except Exception:
+            pass  # Invalid token - return all (for unauthenticated access during demo)
+    
+    incs = q.order_by(Incident.creation_time.desc()).all()
     res = []
     for inc in incs:
         d = inc.__dict__.copy()
@@ -122,9 +160,19 @@ def reset_simulation():
     return {"status": "reset"}
 
 @router.post("/simulation/scenario/{scenario_id}")
-async def run_scenario(scenario_id: int):
-    await engine.trigger_fraud_cascade(scenario_id=scenario_id)
-    return {"status": "scenario triggered", "scenario": scenario_id}
+async def run_scenario(scenario_id: int, seed: Optional[int] = None, authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            role = payload.get("role", "")
+            if role == "BANK":
+                raise HTTPException(status_code=403, detail="Forbidden: Bank officers are not authorized to trigger simulation scenarios")
+        except jwt.PyJWTError:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+    inc_id = await engine.trigger_fraud_cascade(scenario_id=scenario_id, seed=seed)
+    return {"status": "scenario triggered", "scenario": scenario_id, "incident_id": inc_id}
 
 @router.get("/scenarios")
 def get_scenarios():
@@ -399,3 +447,47 @@ def get_all_predictions(db: Session = Depends(get_db)):
 @router.get('/terminals')
 def get_all_terminals(db: Session = Depends(get_db)):
     return db.query(Terminal).limit(500).all()
+
+@router.get("/predictions/{prediction_id}/trace")
+def get_prediction_trace(prediction_id: str, db: Session = Depends(get_db)):
+    pred = db.query(Prediction).filter(Prediction.id == prediction_id).first()
+    if not pred:
+        raise HTTPException(status_code=404, detail="Prediction not found")
+    inc = db.query(Incident).filter(Incident.id == pred.incident_id).first()
+    
+    return {
+        "prediction_id": pred.id,
+        "incident_id": pred.incident_id,
+        "model_version": pred.model_version or "V1.0 Calibrated Logistic",
+        "dataset_version": "PUNE_SYNTH_V1_TEMPORAL",
+        "feature_values": pred.feature_snapshot or {},
+        "feature_timestamps": {
+            "as_of_time": pred.timestamp.isoformat() if pred.timestamp else None,
+            "lookback_window_5m": (pred.timestamp - datetime.timedelta(minutes=5)).isoformat() if pred.timestamp else None,
+            "lookback_window_24h": (pred.timestamp - datetime.timedelta(hours=24)).isoformat() if pred.timestamp else None,
+        },
+        "raw_score": pred.raw_score,
+        "calibrated_probability": pred.cashout_probability,
+        "predicted_window": {
+            "start": pred.estimated_time_window_start.isoformat() if pred.estimated_time_window_start else None,
+            "end": pred.estimated_time_window_end.isoformat() if pred.estimated_time_window_end else None
+        },
+        "predicted_region": pred.predicted_region_h3,
+        "terminal_ranking": pred.top_k_terminals or [],
+        "actual_terminal": inc.ground_truth_terminal if inc else None,
+        "actual_cashout_time": inc.ground_truth_time.isoformat() if inc and inc.ground_truth_time else None
+    }
+
+@router.post("/security/enforce-control")
+def security_enforce_control(authorization: Optional[str] = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication token required")
+    token = authorization.split(" ")[1]
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        role = payload.get("role", "")
+        if role not in ["JUDGE", "SUPERVISOR", "ADMIN", "I4C"]:
+            raise HTTPException(status_code=403, detail=f"Role '{role}' is not authorized for simulation control")
+        return {"status": "AUTHORIZED", "role": role, "user": payload.get("username")}
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")

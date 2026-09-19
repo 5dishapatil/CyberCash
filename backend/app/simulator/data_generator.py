@@ -24,7 +24,8 @@ def generate_base_data(db, num_banks=10, num_accounts=1000, num_devices=500, num
     db.commit()
 
     roles = [
-        ("bank_officer", "BANK", "Bank Officer", "B0"),
+        ("bank_officer", "BANK", "Bank Officer B0", "B0"),
+        ("bank_officer_b1", "BANK", "Bank Officer B1", "B1"),
         ("lea_officer", "LEA", "Law Enforcement", None),
         ("i4c_analyst", "I4C", "I4C Analyst", None),
         ("supervisor", "SUPERVISOR", "Supervisor", None),
@@ -49,7 +50,7 @@ def generate_base_data(db, num_banks=10, num_accounts=1000, num_devices=500, num
     devices = []
     for i in range(num_devices):
         assoc_accs = [random.choice(accounts).id for _ in range(random.randint(1, 3))]
-        dev = Device(id=f"D{i}", device_type=random.choice(["MOBILE", "DESKTOP", "TABLET"]), associated_account_ids=assoc_accs, historical_usage=random.randint(10, 1000))
+        dev = Device(id=f"D{i}", device_type=random.choice(["MOBILE", "DESKTOP", "TABLET"]), associated_account_ids=assoc_accs, historical_usage=random.randint(10, 1000), latitude=random.uniform(LAT_MIN, LAT_MAX), longitude=random.uniform(LNG_MIN, LNG_MAX))
         devices.append(dev)
     db.add_all(devices)
     db.commit()

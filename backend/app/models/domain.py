@@ -42,6 +42,8 @@ class Device(Base):
     device_type = Column(String)
     associated_account_ids = Column(JSON) # List of account IDs
     historical_usage = Column(Integer)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
 
 class Terminal(Base):
     __tablename__ = "terminals"
@@ -106,6 +108,8 @@ class Prediction(Base):
     explanations = Column(JSON)
     recommended_action = Column(String)
     model_version = Column(String, default="V1.0 Baseline")
+    raw_score = Column(Float, nullable=True)
+    feature_snapshot = Column(JSON, nullable=True)
 
 
 
