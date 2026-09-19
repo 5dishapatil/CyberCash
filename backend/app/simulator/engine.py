@@ -5,6 +5,7 @@ import datetime
 from sqlalchemy.orm import Session
 from app.db.database import SessionLocal
 from app.models.domain import Transaction, Account, Incident, Prediction
+from app.simulator.notifications import notification_router
 from app.ml.predictor import predict_cashout, rank_candidate_terminals
 
 class SimulationEngine:
@@ -119,6 +120,9 @@ class SimulationEngine:
         db.add(inc)
         db.commit()
         
+        # Async dispatch of simulated notifications (Webhooks, Email, SMS)
+        asyncio.create_task(notification_router.route_incident(inc.id))
+        
         # Step 1: L1 transfer
         tx1 = Transaction(
             id=f"TXF_{uuid.uuid4().hex[:8]}", timestamp=self.simulation_time,
@@ -166,16 +170,26 @@ class SimulationEngine:
         if term_id:
             from app.models.domain import Withdrawal
             cashout_time = self.simulation_time + datetime.timedelta(minutes=15)
-            w = Withdrawal(
-                id=f"WTH_{uuid.uuid4().hex[:8]}", 
-                timestamp=cashout_time, 
-                terminal_id=term_id, 
-                account_id=mules[0].id, 
-                amount=amt, 
-                fraud_label=True,
-                incident_id=inc.id
-            )
-            db.add(w)
+            
+            # PROACTIVE INTERVENTION CHECK
+            # We re-fetch the account and incident to get the freshest state (in case a human intervened)
+            db.refresh(mules[0])
+            db.refresh(inc)
+            
+            if mules[0].status == "HOLD" or inc.status == "RESOLVED":
+                print(f"[PROACTIVE INTERVENTION SUCCESS] Blocked withdrawal of {amt} for account {mules[0].id}")
+                # We could log an intercepted transaction here, but we will simply not create the successful withdrawal.
+            else:
+                w = Withdrawal(
+                    id=f"WTH_{uuid.uuid4().hex[:8]}", 
+                    timestamp=cashout_time, 
+                    terminal_id=term_id, 
+                    account_id=mules[0].id, 
+                    amount=amt, 
+                    fraud_label=True,
+                    incident_id=inc.id
+                )
+                db.add(w)
             inc.ground_truth_terminal = term_id
             inc.ground_truth_time = cashout_time
             db.commit()

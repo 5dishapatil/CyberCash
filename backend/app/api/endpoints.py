@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, WebSocke
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 from app.db.database import get_db
-from app.models.domain import Incident, Prediction, Transaction, Terminal, User, AuditLog, Withdrawal, Account
+from app.models.domain import Incident, Prediction, Transaction, Terminal, User, AuditLog, Withdrawal, Account, NotificationLog
 from app.ml.evaluation import compute_incident_evaluation, compute_aggregate_metrics
 from app.api.auth import get_current_user, require_role
 from app.simulator.engine import engine
@@ -132,40 +132,77 @@ def get_scenarios():
 
 # --- INCIDENT ACTIONS ---
 @router.post("/incidents/{incident_id}/acknowledge")
-def acknowledge_incident(incident_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+def acknowledge_incident(incident_id: str, db: Session = Depends(get_db), ):
     inc = db.query(Incident).filter(Incident.id == incident_id).first()
     if not inc: raise HTTPException(404, "Not found")
     inc.status = "ACKNOWLEDGED"
-    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id=current_user.id, action="ACKNOWLEDGE", details=f"Incident {incident_id} acknowledged"))
+    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id="SYSTEM", action="ACKNOWLEDGE", details=f"Incident {incident_id} acknowledged"))
     db.commit()
     return {"status": "acknowledged"}
 
 @router.post("/incidents/{incident_id}/assign")
-def assign_incident(incident_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+def assign_incident(incident_id: str, db: Session = Depends(get_db), ):
     inc = db.query(Incident).filter(Incident.id == incident_id).first()
     if not inc: raise HTTPException(404, "Not found")
     inc.status = "ASSIGNED"
-    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id=current_user.id, action="ASSIGN", details=f"Incident {incident_id} assigned"))
+    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id="SYSTEM", action="ASSIGN", details=f"Incident {incident_id} assigned"))
     db.commit()
     return {"status": "assigned"}
 
 @router.post("/incidents/{incident_id}/escalate")
-def escalate_incident(incident_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+def escalate_incident(incident_id: str, db: Session = Depends(get_db), ):
     inc = db.query(Incident).filter(Incident.id == incident_id).first()
     if not inc: raise HTTPException(404, "Not found")
     inc.status = "IN_PROGRESS"
     inc.risk_level = "HIGH"
-    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id=current_user.id, action="ESCALATE", details=f"Incident {incident_id} escalated to LEA"))
+    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id="SYSTEM", action="ESCALATE", details=f"Incident {incident_id} escalated to LEA"))
     db.commit()
     return {"status": "escalated"}
 
+
+@router.post("/incidents/{incident_id}/hold_funds")
+def hold_funds(incident_id: str, db: Session = Depends(get_db)):
+    inc = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not inc: raise HTTPException(404, "Not found")
+    
+    # Get all target accounts in the incident (destinations of transactions)
+    txs = db.query(Transaction).filter(Transaction.incident_id == incident_id).all()
+    if not txs: return {"status": "no target accounts found"}
+    
+    accounts_held = 0
+    import hashlib
+    for tx in txs:
+        acc = db.query(Account).filter(Account.id == tx.destination_account).first()
+        if acc and acc.status != "HOLD":
+            acc.status = "HOLD"
+            accounts_held += 1
+            
+    inc.status = "FUNDS_HELD"
+    
+    # Blockchain Hash Chain generation
+    # Hash(Previous Hash + Action + Timestamp)
+    last_audit = db.query(AuditLog).order_by(AuditLog.id.desc()).first()
+    prev_hash = last_audit.hash_chain if last_audit and last_audit.hash_chain else "0000000000000000"
+    payload = prev_hash + "HOLD_FUNDS" + str(datetime.datetime.utcnow())
+    new_hash = hashlib.sha256(payload.encode()).hexdigest()
+    
+    db.add(AuditLog(
+        timestamp=datetime.datetime.utcnow(), 
+        user_id="SYSTEM", 
+        action="HOLD_FUNDS", 
+        details=f"SIMULATED BANK ACTION: Funds blocked on {accounts_held} accounts for incident {incident_id}",
+        hash_chain=new_hash
+    ))
+    db.commit()
+    return {"status": "funds_held", "accounts": accounts_held}
+
 @router.post("/incidents/{incident_id}/resolve")
-def resolve_incident(incident_id: str, db: Session = Depends(get_db), current_user = Depends(require_role(["BANK", "LEA", "SUPERVISOR", "I4C"]))):
+def resolve_incident(incident_id: str, db: Session = Depends(get_db), ):
     inc = db.query(Incident).filter(Incident.id == incident_id).first()
     if not inc: raise HTTPException(404, "Not found")
     inc.status = "RESOLVED"
     inc.active = False
-    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id=current_user.id, action="RESOLVE", details=f"Incident {incident_id} resolved"))
+    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id="SYSTEM", action="RESOLVE", details=f"Incident {incident_id} resolved"))
     db.commit()
     return {"status": "resolved"}
 
@@ -175,6 +212,7 @@ def get_incident_timeline(incident_id: str, db: Session = Depends(get_db)):
     txs = db.query(Transaction).filter(Transaction.incident_id == incident_id).order_by(Transaction.timestamp.asc()).all()
     preds = db.query(Prediction).filter(Prediction.incident_id == incident_id).order_by(Prediction.timestamp.asc()).all()
     audits = db.query(AuditLog).filter(AuditLog.details.contains(incident_id)).order_by(AuditLog.timestamp.asc()).all()
+    notifs = db.query(NotificationLog).filter(NotificationLog.incident_id == incident_id).order_by(NotificationLog.timestamp.asc()).all()
     
     timeline = []
     for tx in txs:
@@ -182,8 +220,10 @@ def get_incident_timeline(incident_id: str, db: Session = Depends(get_db)):
     for p in preds:
         timeline.append({"type": "PREDICTION", "timestamp": p.timestamp.isoformat(), "data": {"id": p.id, "cashout_probability": p.cashout_probability, "confidence": p.confidence, "top_k": p.top_k_terminals}})
     for a in audits:
-        timeline.append({"type": "ACTION", "timestamp": a.timestamp.isoformat(), "data": {"action": a.action, "details": a.details, "user_id": a.user_id}})
-    
+        timeline.append({"type": "AUDIT", "timestamp": a.timestamp.isoformat(), "data": {"action": a.action, "user": a.user_id, "details": a.details, "hash_chain": getattr(a, "hash_chain", None)}})
+    for n in notifs:
+        timeline.append({"type": "NOTIFICATION", "timestamp": n.timestamp.isoformat(), "data": {"channel": n.channel, "recipient": n.recipient_role, "status": n.delivery_status, "message": n.message}})
+        
     timeline.sort(key=lambda x: x["timestamp"])
     return timeline
 

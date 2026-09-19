@@ -19,6 +19,7 @@ class AuditLog(Base):
     user_id = Column(String, ForeignKey("users.id"))
     action = Column(String)
     details = Column(String)
+    hash_chain = Column(String, nullable=True)
 
 class Bank(Base):
     __tablename__ = "banks"
@@ -33,6 +34,7 @@ class Account(Base):
     risk_profile = Column(String)
     location_region = Column(String)
     historical_transaction_volume = Column(Float)
+    status = Column(String, default="ACTIVE")
     
 class Device(Base):
     __tablename__ = "devices"
@@ -105,3 +107,39 @@ class Prediction(Base):
     recommended_action = Column(String)
     model_version = Column(String, default="V1.0 Baseline")
 
+
+
+class NotificationLog(Base):
+    __tablename__ = "notification_logs"
+    id = Column(String, primary_key=True, index=True)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    incident_id = Column(String, ForeignKey("incidents.id"))
+    recipient_role = Column(String)
+    recipient_id = Column(String, nullable=True) # e.g. bank_id or jurisdiction
+    channel = Column(String) # WEBHOOK, EMAIL, SMS, WS
+    message = Column(String)
+    delivery_status = Column(String) # SENT, FAILED, PENDING
+
+
+from sqlalchemy import event
+import hashlib
+
+def calculate_audit_hash(mapper, connection, target):
+    if not target.timestamp:
+        import datetime
+        target.timestamp = datetime.datetime.utcnow()
+    # Very simplistic for prototype: we just query max id
+    # In a real system you'd lock the table or use the prev row precisely
+    prev_hash = "GENESIS_BLOCK_00000000"
+    try:
+        # this is hacky for a listener, but good enough for the SIH prototype demo
+        res = connection.execute("SELECT hash_chain FROM audit_logs ORDER BY id DESC LIMIT 1").fetchone()
+        if res and res[0]:
+            prev_hash = res[0]
+    except Exception:
+        pass
+    
+    payload = f"{prev_hash}|{target.action}|{target.user_id}|{target.details}|{target.timestamp}"
+    target.hash_chain = hashlib.sha256(payload.encode()).hexdigest()
+
+event.listen(AuditLog, 'before_insert', calculate_audit_hash)

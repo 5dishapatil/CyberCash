@@ -196,6 +196,18 @@ export default function IncidentWorkspace() {
                            <span>Transfer of <strong className="text-rose-400">?{item.data.amount}</strong> from <span className="font-mono">{item.data.source}</span> to <span className="font-mono">{item.data.destination}</span></span>
                         ) : item.type === 'PREDICTION' ? (
                            <span>Risk Probability: <strong className="text-rose-400">{(item.data.cashout_probability * 100).toFixed(1)}%</strong> | Region: {item.data.predicted_region_h3}</span>
+                        ) : item.type === 'NOTIFICATION' ? (
+                           <div className="bg-slate-900/50 p-2 rounded border border-slate-700">
+                              <div className="text-cyan-400 font-bold mb-1">[{item.data.channel}] ? {item.data.recipient}</div>
+                              <div className="text-xs">{item.data.message}</div>
+                              <div className="text-[10px] text-emerald-500 mt-1 uppercase tracking-wider">{item.data.status}</div>
+                           </div>
+                        ) : item.type === 'AUDIT' ? (
+                           <div className="bg-slate-900/50 p-2 rounded border border-slate-700">
+                              <div className="text-amber-400 font-bold mb-1">{item.data.action} by {item.data.user || 'SYSTEM'}</div>
+                              <div className="text-xs mb-2">{item.data.details}</div>
+                              {item.data.hash_chain && <div className="text-[10px] text-slate-500 font-mono break-all bg-black p-1 rounded">?? Blockchain Hash: {item.data.hash_chain}</div>}
+                           </div>
                         ) : (
                            <pre className="text-xs text-slate-400 font-mono whitespace-pre-wrap">{JSON.stringify(item.data, null, 2)}</pre>
                         )}
