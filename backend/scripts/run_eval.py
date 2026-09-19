@@ -24,6 +24,8 @@ from app.simulator.engine import SimulationEngine
 from app.ml.evaluation import compute_incident_evaluation
 from app.models.domain import Incident, Prediction, Terminal, Transaction
 
+EVAL_SEED = 42
+
 def compute_percentile(arr, p):
     if not arr: return 0.0
     arr.sort()
@@ -36,23 +38,18 @@ def compute_percentile(arr, p):
     d1 = arr[int(c)] * (k - f)
     return d0 + d1
 
-def get_baseline_prediction(db, first_tx_account_id):
-    # simple baseline: just pick random 5 terminals
-    terminals = db.query(Terminal).limit(5).all()
-    return [{"terminal_id": t.id} for t in terminals]
-
-def bootstrap_ci(data_list, metric_func, n_iterations=100):
-    if not data_list: return [0, 0]
+def bootstrap_ci(data_list, metric_func, rng, n_iterations=1000):
+    if not data_list: return [0.0, 0.0]
     n = len(data_list)
     values = []
     for _ in range(n_iterations):
-        sample = random.choices(data_list, k=n)
+        sample = rng.choices(data_list, k=n)
         values.append(metric_func(sample))
     values.sort()
     return [values[int(0.025 * n_iterations)], values[int(0.975 * n_iterations)]]
 
 async def run_evaluation(seed_offset=0):
-    rng = random.Random(42 + seed_offset)
+    rng = random.Random(EVAL_SEED + seed_offset)
     
     engine = SimulationEngine()
     engine.simulation_time = datetime.datetime(2026, 7, 1, 10, 0, 0)
@@ -77,12 +74,12 @@ async def run_evaluation(seed_offset=0):
     
     rng.shuffle(scenarios)
     
-    incident_types = {}
     for sid, stype, sname in scenarios:
         s_seed = rng.randint(1, 999999)
         await engine.trigger_fraud_cascade(scenario_id=sid, seed=s_seed, clear_db=False)
     
-    incidents = db.query(Incident).filter(Incident.ground_truth_terminal != None).all()
+    incidents = db.query(Incident).filter(Incident.ground_truth_terminal != None).order_by(Incident.id.asc()).all()
+    all_terminals = [t.id for t in db.query(Terminal).order_by(Terminal.id.asc()).all()]
     
     results = []
     
@@ -105,18 +102,36 @@ async def run_evaluation(seed_offset=0):
         # Calculate baseline accuracy
         predictions = db.query(Prediction).filter(Prediction.incident_id == inc.id).order_by(Prediction.timestamp.asc()).all()
         baseline_brier = 0.25 # baseline probability 0.5
-        baseline_p5 = 0.0
         
-        if predictions:
-            first_pred = predictions[0]
-            # fake baseline accuracy logic for test
-            baseline_p5 = 0.0
+        baseline_p1 = 0.0
+        baseline_p5 = 0.0
+        baseline_r5 = 0.0
+        
+        if inc.ground_truth_terminal and len(all_terminals) >= 5:
+            # Deterministic baseline: top 5 terminals by ID
+            baseline_top5 = all_terminals[:5]
+            if inc.ground_truth_terminal == baseline_top5[0]:
+                baseline_p1 = 1.0
+            if inc.ground_truth_terminal in baseline_top5:
+                baseline_p5 = 1.0
+                baseline_r5 = 1.0
             
         ev["baseline_brier"] = baseline_brier
+        ev["baseline_p1"] = baseline_p1
         ev["baseline_p5"] = baseline_p5
+        ev["baseline_r5"] = baseline_r5
         ev["is_abstained"] = predictions[-1].top_k_terminals == [] if predictions else False
+        
+        # Strip incident_id to make output inherently deterministic on contents alone
+        ev.pop("incident_id", None)
+        ev.pop("actual_time", None)
+        ev.pop("actual_terminal", None)
+        ev.pop("predicted_terminals", None)
+        
         results.append(ev)
 
+    # Deterministic sort
+    results.sort(key=lambda x: json.dumps(x, sort_keys=True))
     return results
 
 def compute_metrics(results):
@@ -150,10 +165,11 @@ def compute_metrics(results):
     def bootstrap_r5(data): return sum(r.get("recall_at_5", 0) for r in data) / len(data)
     def bootstrap_brier(data): return sum(r.get("calibration_error", 0) for r in data) / len(data)
     
-    ci_p1 = bootstrap_ci(results, bootstrap_p1)
-    ci_p5 = bootstrap_ci(results, bootstrap_p5)
-    ci_r5 = bootstrap_ci(results, bootstrap_r5)
-    ci_brier = bootstrap_ci(results, bootstrap_brier)
+    rng = random.Random(EVAL_SEED)
+    ci_p1 = bootstrap_ci(results, bootstrap_p1, rng)
+    ci_p5 = bootstrap_ci(results, bootstrap_p5, rng)
+    ci_r5 = bootstrap_ci(results, bootstrap_r5, rng)
+    ci_brier = bootstrap_ci(results, bootstrap_brier, rng)
     
     # Calibration bins
     bins = [0, 0, 0, 0, 0]
@@ -200,18 +216,20 @@ def compute_metrics(results):
             "table": calibration_table
         },
         "lead_time": {
-            "mean": sum(lead_times) / max(1, len(lead_times)),
+            "mean": sum(lead_times) / max(1, len(lead_times)) if lead_times else 0,
             "median": compute_percentile(lead_times, 0.5),
             "p90": compute_percentile(lead_times, 0.9)
         },
         "geo_error": {
-            "mean": sum(geo_errors) / max(1, len(geo_errors)),
+            "mean": sum(geo_errors) / max(1, len(geo_errors)) if geo_errors else 0,
             "median": compute_percentile(geo_errors, 0.5),
             "p90": compute_percentile(geo_errors, 0.9)
         },
         "baseline": {
             "Brier_Score": sum(r.get("baseline_brier", 0) for r in results) / n,
-            "Precision@5": sum(r.get("baseline_p5", 0) for r in results) / n
+            "Precision@1": sum(r.get("baseline_p1", 0) for r in results) / n,
+            "Precision@5": sum(r.get("baseline_p5", 0) for r in results) / n,
+            "Recall@5": sum(r.get("baseline_r5", 0) for r in results) / n
         },
         "uncertainty": {
             "Precision@1_95CI": ci_p1,
@@ -235,17 +253,15 @@ async def generate_and_evaluate():
     res2 = await run_evaluation(seed_offset=0)
     met2 = compute_metrics(res2)
     
-    # Hash check on exactly the computed metrics (which covers rankings and classifications)
-    # as raw res1 contains non-deterministic uuid4 generated IDs.
     h1 = hashlib.sha256(json.dumps(met1, sort_keys=True).encode()).hexdigest()
     h2 = hashlib.sha256(json.dumps(met2, sort_keys=True).encode()).hexdigest()
     
-    print(f"Run 1 Hash: {h1}")
-    print(f"Run 2 Hash: {h2}")
+    print(f"Run 1:\nreproducibility_hash = {h1}\n")
+    print(f"Run 2:\nreproducibility_hash = {h2}\n")
     if h1 == h2:
-        print("REPRODUCIBILITY PASSED: Runs are identical.")
+        print("REPRODUCIBILITY: PASS")
     else:
-        print("REPRODUCIBILITY FAILED: Divergence detected.")
+        print("REPRODUCIBILITY: FAIL")
         
     # Breakdown
     breakdown = {}
@@ -255,7 +271,7 @@ async def generate_and_evaluate():
         
     final_output = {
         "dataset_version": "1.0",
-        "random_seed": 42,
+        "random_seed": EVAL_SEED,
         "evaluation_unit": "incident",
         "scenario_count": len(res1),
         "incident_count": len(res1),
