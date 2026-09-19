@@ -32,6 +32,13 @@ class SimulationEngine:
                 event = self._generate_legit_transaction(db)
                 if event:
                     await self._broadcast({"type": "EVENT", "data": event})
+            
+            # Occasionally spawn an incident automatically for demo purposes
+            if random.random() < 0.05:
+                # randomly trigger scenario 2 to 9
+                scenario_id = random.randint(2, 9)
+                await self.trigger_fraud_cascade(scenario_id=scenario_id)
+                
             await asyncio.sleep(1)
         db.close()
 
@@ -73,19 +80,41 @@ class SimulationEngine:
         db.add(pred)
         db.commit()
 
-    async def trigger_fraud_cascade(self, seed=42):
-        # We don't seed global random to prevent ID collisions, 
-        # or we just use uuid for IDs explicitly.
+    async def trigger_fraud_cascade(self, scenario_id=3):
+        # Dynamic incident generation based on scenario_id
         db = SessionLocal()
-        accounts = db.query(Account).limit(10).all()
+        accounts = db.query(Account).limit(20).all()
         if not accounts: return
-        victim = accounts[0]
-        mules = accounts[1:5]
         
+        # Randomize victim and mules
+        import random
+        actors = random.sample(accounts, 6)
+        victim = actors[0]
+        mules = actors[1:5]
+        
+        # Scenario logic
+        amounts = {
+            1: (random.uniform(500, 5000), "NORMAL_ACTIVITY", "LOW"),
+            2: (random.uniform(500000, 1500000), "HIGH_VALUE_LEGIT", "LOW"),
+            3: (480000, "MULE_CASCADE", "HIGH"),
+            4: (150000, "RAPID_CASHOUT", "HIGH"),
+            5: (200000, "ATM_SWITCHING", "HIGH"),
+            6: (300000, "GEO_SWITCHING", "HIGH"),
+            7: (random.uniform(40000, 90000), "AMOUNT_SPLITTING", "HIGH"),
+            8: (100000, "SLEEPER_MULE", "HIGH"),
+            9: (500000, "CROSS_BANK_CASCADE", "HIGH"),
+            10: (900000, "FALSE_POSITIVE", "LOW")
+        }
+        amt, inc_type, risk = amounts.get(scenario_id, (250000, "MULE_CASCADE", "HIGH"))
+        
+        # Don't create an incident for normal activity
+        if scenario_id == 1:
+            return
+            
         inc = Incident(
-            id=f"INC_{uuid.uuid4().hex[:8]}", incident_type="MULE_CASCADE",
+            id=f"INC_{uuid.uuid4().hex[:8]}", incident_type=inc_type,
             creation_time=self.simulation_time, trigger_source="SYSTEM",
-            amount_at_risk=480000, risk_level="HIGH", status="NEW"
+            amount_at_risk=amt, risk_level=risk, status="NEW"
         )
         db.add(inc)
         db.commit()
@@ -94,7 +123,7 @@ class SimulationEngine:
         tx1 = Transaction(
             id=f"TXF_{uuid.uuid4().hex[:8]}", timestamp=self.simulation_time,
             source_account=victim.id, destination_account=mules[0].id,
-            amount=480000, transaction_type="TRANSFER", bank_id=victim.bank_id, risk_signal="HIGH",
+            amount=amt, transaction_type="TRANSFER", bank_id=victim.bank_id, risk_signal="HIGH",
             incident_id=inc.id
         )
         db.add(tx1)
@@ -109,7 +138,7 @@ class SimulationEngine:
             tx = Transaction(
                 id=f"TXF_{uuid.uuid4().hex[:8]}", timestamp=self.simulation_time,
                 source_account=mules[0].id, destination_account=m.id,
-                amount=480000 / 3, transaction_type="TRANSFER", bank_id=mules[0].bank_id, risk_signal="HIGH",
+                amount=amt / 3, transaction_type="TRANSFER", bank_id=mules[0].bank_id, risk_signal="HIGH",
                 incident_id=inc.id
             )
             db.add(tx)
@@ -142,7 +171,7 @@ class SimulationEngine:
                 timestamp=cashout_time, 
                 terminal_id=term_id, 
                 account_id=mules[0].id, 
-                amount=480000, 
+                amount=amt, 
                 fraud_label=True,
                 incident_id=inc.id
             )

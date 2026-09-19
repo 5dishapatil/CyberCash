@@ -54,6 +54,10 @@ export default function IncidentWorkspace() {
 
   const handleAction = async (action: string) => {
     await fetch(`http://localhost:8000/api/incidents/${id}/${action}`, { method: 'POST' });
+    const incRes = await fetch('http://localhost:8000/api/incidents');
+    const allIncidents = await incRes.json();
+    const currentInc = allIncidents.find((i: any) => i.id === id);
+    setIncident(currentInc);
   };
 
   const chartData = predictions.map(p => ({
@@ -187,7 +191,15 @@ export default function IncidentWorkspace() {
                    </div>
                    <div className="flex-1 bg-slate-800 border border-slate-700 p-3 rounded-lg">
                      <div className="font-bold text-cyan-400 mb-1">{item.type}</div>
-                     <pre className="text-xs text-slate-300 font-mono whitespace-pre-wrap">{JSON.stringify(item.data, null, 2)}</pre>
+                     <div className="text-sm text-slate-300">
+                        {item.type === 'TRANSACTION' ? (
+                           <span>Transfer of <strong className="text-rose-400">?{item.data.amount}</strong> from <span className="font-mono">{item.data.source}</span> to <span className="font-mono">{item.data.destination}</span></span>
+                        ) : item.type === 'PREDICTION' ? (
+                           <span>Risk Probability: <strong className="text-rose-400">{(item.data.cashout_probability * 100).toFixed(1)}%</strong> | Region: {item.data.predicted_region_h3}</span>
+                        ) : (
+                           <pre className="text-xs text-slate-400 font-mono whitespace-pre-wrap">{JSON.stringify(item.data, null, 2)}</pre>
+                        )}
+                     </div>
                    </div>
                  </div>
                ))}

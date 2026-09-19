@@ -6,10 +6,21 @@ import { Map, Layers } from 'lucide-react';
 const MapComponent = dynamic(() => import('../components/MapComponent'), { ssr: false });
 
 export default function GISIntelligence() {
-  const [layers, setLayers] = useState({ terminals: true, branches: false, incidents: true });
+  const [layers, setLayers] = useState({ terminals: true, incidents: true });
   const [incidents, setIncidents] = useState<any[]>([]);
   const [predictions, setPredictions] = useState<any[]>([]);
+  const [terminals, setTerminals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchInfra = async () => {
+      try {
+        const tRes = await fetch('http://localhost:8000/api/terminals');
+        setTerminals(await tRes.json());
+      } catch(e) {}
+    };
+    fetchInfra();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -18,19 +29,12 @@ export default function GISIntelligence() {
         const incData = await incRes.json();
         setIncidents(incData.filter((i:any) => i.active));
         
-        // Fetch global predictions
-        const predRes = await fetch('http://localhost:8000/api/predictions');
-        if (predRes.ok) {
-           const predData = await predRes.json();
-           // We need to fetch full predictions for MapComponent, which expects top_k_terminals
-           // Since global predictions might not have it, we'll just fetch predictions for active incidents
-           const fullPreds = await Promise.all(
-              incData.filter((i:any) => i.active).map((inc:any) => 
-                fetch(`http://localhost:8000/api/predictions/${inc.id}`).then(r => r.json())
-              )
-           );
-           setPredictions(fullPreds.flat());
-        }
+        const fullPreds = await Promise.all(
+           incData.filter((i:any) => i.active).map((inc:any) => 
+             fetch(`http://localhost:8000/api/predictions/${inc.id}`).then(r => r.json())
+           )
+        );
+        setPredictions(fullPreds.flat());
       } catch (e) {
         console.error(e);
       } finally {
@@ -63,16 +67,16 @@ export default function GISIntelligence() {
             <input type="checkbox" checked={layers.incidents} onChange={e => setLayers({...layers, incidents: e.target.checked})} className="accent-rose-500 w-4 h-4" />
             Active Threats
           </label>
-          <label className="flex items-center gap-3 text-sm text-slate-300 cursor-pointer hover:text-white transition">
-            <input type="checkbox" checked={layers.branches} onChange={e => setLayers({...layers, branches: e.target.checked})} className="accent-amber-500 w-4 h-4" />
-            Bank Branches
-          </label>
         </div>
         <div className="w-full h-full bg-slate-900">
            {loading ? (
              <div className="flex items-center justify-center h-full text-slate-500">Loading Geospatial Data...</div>
            ) : (
-             <MapComponent incidents={layers.incidents ? incidents : []} predictions={layers.incidents ? predictions : []} />
+             <MapComponent 
+               incidents={layers.incidents ? incidents : []} 
+               predictions={layers.incidents ? predictions : []} 
+               terminals={layers.terminals ? terminals : []} 
+             />
            )}
         </div>
       </div>

@@ -27,7 +27,16 @@ def get_terminals(db: Session = Depends(get_db)):
 
 @router.get("/incidents")
 def get_incidents(db: Session = Depends(get_db)):
-    return db.query(Incident).order_by(Incident.creation_time.desc()).all()
+    incs = db.query(Incident).order_by(Incident.creation_time.desc()).all()
+    res = []
+    for inc in incs:
+        d = inc.__dict__.copy()
+        if "_sa_instance_state" in d:
+            del d["_sa_instance_state"]
+        latest_pred = db.query(Prediction).filter(Prediction.incident_id == inc.id).order_by(Prediction.timestamp.desc()).first()
+        d["cashout_probability"] = latest_pred.cashout_probability if latest_pred else 0.0
+        res.append(d)
+    return res
 
 @router.get("/predictions/{incident_id}")
 def get_predictions(incident_id: str, db: Session = Depends(get_db)):
@@ -114,7 +123,7 @@ def reset_simulation():
 
 @router.post("/simulation/scenario/{scenario_id}")
 async def run_scenario(scenario_id: int):
-    await engine.trigger_fraud_cascade(seed=scenario_id * 100 + 42)
+    await engine.trigger_fraud_cascade(scenario_id=scenario_id)
     return {"status": "scenario triggered", "scenario": scenario_id}
 
 @router.get("/scenarios")
@@ -346,3 +355,7 @@ def start_load_test():
 def get_all_predictions(db: Session = Depends(get_db)):
     preds = db.query(Prediction).order_by(Prediction.timestamp.desc()).limit(100).all()
     return [{'id': p.id, 'incident_id': p.incident_id, 'timestamp': p.timestamp.isoformat(), 'prob': p.cashout_probability, 'region': p.predicted_region_h3} for p in preds]
+
+@router.get('/terminals')
+def get_all_terminals(db: Session = Depends(get_db)):
+    return db.query(Terminal).limit(500).all()

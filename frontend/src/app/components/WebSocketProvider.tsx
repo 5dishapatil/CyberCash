@@ -15,7 +15,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
     const connect = () => {
       // Connect to mock endpoint or localhost
-      ws = new WebSocket('ws://localhost:8000/ws');
+      ws = new WebSocket('ws://localhost:8000/api/ws');
       
       ws.onopen = () => {
         setConnected(true);
