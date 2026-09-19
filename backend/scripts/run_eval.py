@@ -22,7 +22,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from app.db.database import SessionLocal, engine as db_engine
 from app.simulator.engine import SimulationEngine
 from app.ml.evaluation import compute_incident_evaluation
-from app.models.domain import Incident, Prediction, Terminal, Transaction
+from app.models.domain import Incident, Prediction, Terminal, Transaction, Withdrawal
 
 EVAL_SEED = 42
 
@@ -49,6 +49,13 @@ def bootstrap_ci(data_list, metric_func, rng, n_iterations=1000):
     return [values[int(0.025 * n_iterations)], values[int(0.975 * n_iterations)]]
 
 async def run_evaluation(seed_offset=0):
+    print("Resetting test database state...")
+    if os.path.exists(test_db_path):
+        db_engine.dispose() # Close any active connections
+        # Need to ensure all sessions are closed
+    
+    shutil.copyfile(db_path, test_db_path)
+    
     rng = random.Random(EVAL_SEED + seed_offset)
     
     engine = SimulationEngine()
@@ -58,6 +65,10 @@ async def run_evaluation(seed_offset=0):
     db.query(Incident).delete()
     db.query(Prediction).delete()
     db.query(Transaction).filter(Transaction.timestamp >= datetime.datetime(2026, 7, 1, 0, 0, 0)).delete(synchronize_session=False)
+    db.query(Withdrawal).delete()
+    from app.models.domain import Account, NotificationLog
+    db.query(NotificationLog).delete()
+    db.execute(Account.__table__.update().values(status="ACTIVE"))
     db.commit()
     
     # Generate scenarios
@@ -262,6 +273,8 @@ async def generate_and_evaluate():
         print("REPRODUCIBILITY: PASS")
     else:
         print("REPRODUCIBILITY: FAIL")
+        with open("met1.json", "w") as f: json.dump(met1, f, indent=2, sort_keys=True)
+        with open("met2.json", "w") as f: json.dump(met2, f, indent=2, sort_keys=True)
         
     # Breakdown
     breakdown = {}

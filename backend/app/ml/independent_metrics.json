@@ -2,53 +2,53 @@
   "dataset_version": "1.0",
   "random_seed": 42,
   "evaluation_unit": "incident",
-  "scenario_count": 77,
-  "incident_count": 77,
-  "positive_count": 65,
+  "scenario_count": 78,
+  "incident_count": 78,
+  "positive_count": 66,
   "negative_count": 12,
-  "reproducibility_hash": "e34019213713f9575da530bef5af60e03370839a5db16c9a84f91d16bec41e1f",
+  "reproducibility_hash": "26b784e79b98cfb4d540535d16dd69237dcb3d477567554ab5a570e317922fe7",
   "aggregate_metrics": {
-    "sample_count": 77,
-    "positives": 65,
+    "sample_count": 78,
+    "positives": 66,
     "negatives": 12,
     "confusion_matrix": {
-      "TP": 48,
+      "TP": 49,
       "TN": 0,
       "FP": 12,
       "FN": 17
     },
     "classification": {
-      "Precision": 0.8,
-      "Recall": 0.7384615384615385,
-      "F1": 0.768,
+      "Precision": 0.8032786885245902,
+      "Recall": 0.7424242424242424,
+      "F1": 0.7716535433070867,
       "FPR": 1.0
     },
     "ranking": {
-      "Precision@1": 0.8701298701298701,
-      "Precision@5": 0.8701298701298701,
-      "Recall@5": 0.8701298701298701,
-      "NDCG@5": 0.8701298701298701
+      "Precision@1": 0.8717948717948718,
+      "Precision@5": 0.8717948717948718,
+      "Recall@5": 0.8717948717948718,
+      "NDCG@5": 0.8717948717948718
     },
     "calibration": {
-      "Brier_Score": 0.21975584415584432,
+      "Brier_Score": 0.21814615384615402,
       "table": [
         {
           "bin": "0.4-0.6",
-          "predicted_prob": 0.4975800000000002,
+          "predicted_prob": 0.5005346153846155,
           "actual_freq": 1.0,
-          "sample_count": 25
+          "sample_count": 26
         },
         {
           "bin": "0.6-0.8",
-          "predicted_prob": 0.6952249999999999,
+          "predicted_prob": 0.6980266666666666,
           "actual_freq": 1.0,
-          "sample_count": 16
+          "sample_count": 15
         },
         {
           "bin": "0.8-1.0",
-          "predicted_prob": 0.837855555555555,
-          "actual_freq": 0.6666666666666666,
-          "sample_count": 36
+          "predicted_prob": 0.8373081081081075,
+          "actual_freq": 0.6756756756756757,
+          "sample_count": 37
         }
       ]
     },
@@ -58,114 +58,41 @@
       "p90": 19.0
     },
     "geo_error": {
-      "mean": 1.072987012987013,
+      "mean": 1.0592307692307692,
       "median": 0.0,
-      "p90": 7.248000000000006
+      "p90": 7.150999999999998
     },
     "baseline": {
       "Brier_Score": 0.25,
       "Precision@1": 0.0,
-      "Precision@5": 0.12987012987012986,
-      "Recall@5": 0.12987012987012986
+      "Precision@5": 0.1282051282051282,
+      "Recall@5": 0.1282051282051282
     },
     "uncertainty": {
       "Precision@1_95CI": [
-        0.7922077922077922,
-        0.948051948051948
+        0.7948717948717948,
+        0.9358974358974359
       ],
       "Precision@5_95CI": [
-        0.7922077922077922,
-        0.935064935064935
+        0.7948717948717948,
+        0.9487179487179487
       ],
       "Recall@5_95CI": [
-        0.7922077922077922,
-        0.935064935064935
+        0.7948717948717948,
+        0.9358974358974359
       ],
       "Brier_95CI": [
-        0.1741844155844157,
-        0.2736272727272727
+        0.16997564102564106,
+        0.27257820512820513
       ]
     },
     "abstention": {
       "rate": 0.0,
-      "accuracy_non_abstained_p5": 0.8701298701298701,
+      "accuracy_non_abstained_p5": 0.8717948717948718,
       "coverage": 1.0
     }
   },
   "adversarial_breakdown": {
-    "hard negatives": {
-      "sample_count": 12,
-      "positives": 0,
-      "negatives": 12,
-      "confusion_matrix": {
-        "TP": 0,
-        "TN": 0,
-        "FP": 12,
-        "FN": 0
-      },
-      "classification": {
-        "Precision": 0.0,
-        "Recall": 0,
-        "F1": 0,
-        "FPR": 1.0
-      },
-      "ranking": {
-        "Precision@1": 1.0,
-        "Precision@5": 1.0,
-        "Recall@5": 1.0,
-        "NDCG@5": 1.0
-      },
-      "calibration": {
-        "Brier_Score": 0.6959833333333334,
-        "table": [
-          {
-            "bin": "0.8-1.0",
-            "predicted_prob": 0.8334416666666665,
-            "actual_freq": 0.0,
-            "sample_count": 12
-          }
-        ]
-      },
-      "lead_time": {
-        "mean": 19.0,
-        "median": 19.0,
-        "p90": 19.0
-      },
-      "geo_error": {
-        "mean": 0.0,
-        "median": 0.0,
-        "p90": 0.0
-      },
-      "baseline": {
-        "Brier_Score": 0.25,
-        "Precision@1": 0.0,
-        "Precision@5": 0.0,
-        "Recall@5": 0.0
-      },
-      "uncertainty": {
-        "Precision@1_95CI": [
-          1.0,
-          1.0
-        ],
-        "Precision@5_95CI": [
-          1.0,
-          1.0
-        ],
-        "Recall@5_95CI": [
-          1.0,
-          1.0
-        ],
-        "Brier_95CI": [
-          0.6684,
-          0.7414666666666667
-        ]
-      },
-      "abstention": {
-        "rate": 0.0,
-        "accuracy_non_abstained_p5": 1.0,
-        "coverage": 1.0
-      }
-    },
     "classic fraud": {
       "sample_count": 12,
       "positives": 12,
@@ -239,20 +166,105 @@
         "coverage": 1.0
       }
     },
-    "sleeper mule": {
+    "ATM switching": {
+      "sample_count": 10,
+      "positives": 10,
+      "negatives": 0,
+      "confusion_matrix": {
+        "TP": 10,
+        "TN": 0,
+        "FP": 0,
+        "FN": 0
+      },
+      "classification": {
+        "Precision": 1.0,
+        "Recall": 1.0,
+        "F1": 1.0,
+        "FPR": 0
+      },
+      "ranking": {
+        "Precision@1": 0.0,
+        "Precision@5": 0.0,
+        "Recall@5": 0.0,
+        "NDCG@5": 0.0
+      },
+      "calibration": {
+        "Brier_Score": 0.14319,
+        "table": [
+          {
+            "bin": "0.4-0.6",
+            "predicted_prob": 0.5743999999999999,
+            "actual_freq": 1.0,
+            "sample_count": 7
+          },
+          {
+            "bin": "0.6-0.8",
+            "predicted_prob": 0.7379,
+            "actual_freq": 1.0,
+            "sample_count": 2
+          },
+          {
+            "bin": "0.8-1.0",
+            "predicted_prob": 0.851,
+            "actual_freq": 1.0,
+            "sample_count": 1
+          }
+        ]
+      },
+      "lead_time": {
+        "mean": 19.0,
+        "median": 19.0,
+        "p90": 19.0
+      },
+      "geo_error": {
+        "mean": 8.261999999999999,
+        "median": 8.72,
+        "p90": 9.184999999999999
+      },
+      "baseline": {
+        "Brier_Score": 0.25,
+        "Precision@1": 0.0,
+        "Precision@5": 1.0,
+        "Recall@5": 1.0
+      },
+      "uncertainty": {
+        "Precision@1_95CI": [
+          0.0,
+          0.0
+        ],
+        "Precision@5_95CI": [
+          0.0,
+          0.0
+        ],
+        "Recall@5_95CI": [
+          0.0,
+          0.0
+        ],
+        "Brier_95CI": [
+          0.10290999999999999,
+          0.1811
+        ]
+      },
+      "abstention": {
+        "rate": 0.0,
+        "accuracy_non_abstained_p5": 0.0,
+        "coverage": 1.0
+      }
+    },
+    "cross-bank": {
       "sample_count": 12,
       "positives": 12,
       "negatives": 0,
       "confusion_matrix": {
-        "TP": 3,
+        "TP": 12,
         "TN": 0,
         "FP": 0,
-        "FN": 9
+        "FN": 0
       },
       "classification": {
         "Precision": 1.0,
-        "Recall": 0.25,
-        "F1": 0.4,
+        "Recall": 1.0,
+        "F1": 1.0,
         "FPR": 0
       },
       "ranking": {
@@ -262,19 +274,13 @@
         "NDCG@5": 1.0
       },
       "calibration": {
-        "Brier_Score": 0.23524166666666668,
+        "Brier_Score": 0.026024999999999996,
         "table": [
           {
-            "bin": "0.4-0.6",
-            "predicted_prob": 0.48737,
+            "bin": "0.8-1.0",
+            "predicted_prob": 0.8443333333333333,
             "actual_freq": 1.0,
-            "sample_count": 10
-          },
-          {
-            "bin": "0.6-0.8",
-            "predicted_prob": 0.7101999999999999,
-            "actual_freq": 1.0,
-            "sample_count": 2
+            "sample_count": 12
           }
         ]
       },
@@ -308,8 +314,8 @@
           1.0
         ],
         "Brier_95CI": [
-          0.18505833333333332,
-          0.27559999999999996
+          0.01890833333333333,
+          0.03170833333333333
         ]
       },
       "abstention": {
@@ -470,106 +476,21 @@
         "coverage": 1.0
       }
     },
-    "ATM switching": {
-      "sample_count": 10,
-      "positives": 10,
-      "negatives": 0,
+    "hard negatives": {
+      "sample_count": 12,
+      "positives": 0,
+      "negatives": 12,
       "confusion_matrix": {
-        "TP": 10,
+        "TP": 0,
         "TN": 0,
-        "FP": 0,
+        "FP": 12,
         "FN": 0
       },
       "classification": {
-        "Precision": 1.0,
-        "Recall": 1.0,
-        "F1": 1.0,
-        "FPR": 0
-      },
-      "ranking": {
-        "Precision@1": 0.0,
-        "Precision@5": 0.0,
-        "Recall@5": 0.0,
-        "NDCG@5": 0.0
-      },
-      "calibration": {
-        "Brier_Score": 0.13710000000000003,
-        "table": [
-          {
-            "bin": "0.4-0.6",
-            "predicted_prob": 0.5743999999999999,
-            "actual_freq": 1.0,
-            "sample_count": 6
-          },
-          {
-            "bin": "0.6-0.8",
-            "predicted_prob": 0.7096666666666667,
-            "actual_freq": 1.0,
-            "sample_count": 3
-          },
-          {
-            "bin": "0.8-1.0",
-            "predicted_prob": 0.851,
-            "actual_freq": 1.0,
-            "sample_count": 1
-          }
-        ]
-      },
-      "lead_time": {
-        "mean": 19.0,
-        "median": 19.0,
-        "p90": 19.0
-      },
-      "geo_error": {
-        "mean": 8.261999999999999,
-        "median": 8.72,
-        "p90": 9.184999999999999
-      },
-      "baseline": {
-        "Brier_Score": 0.25,
-        "Precision@1": 0.0,
-        "Precision@5": 1.0,
-        "Recall@5": 1.0
-      },
-      "uncertainty": {
-        "Precision@1_95CI": [
-          0.0,
-          0.0
-        ],
-        "Precision@5_95CI": [
-          0.0,
-          0.0
-        ],
-        "Recall@5_95CI": [
-          0.0,
-          0.0
-        ],
-        "Brier_95CI": [
-          0.09551000000000001,
-          0.17501000000000003
-        ]
-      },
-      "abstention": {
-        "rate": 0.0,
-        "accuracy_non_abstained_p5": 0.0,
-        "coverage": 1.0
-      }
-    },
-    "cross-bank": {
-      "sample_count": 11,
-      "positives": 11,
-      "negatives": 0,
-      "confusion_matrix": {
-        "TP": 11,
-        "TN": 0,
-        "FP": 0,
-        "FN": 0
-      },
-      "classification": {
-        "Precision": 1.0,
-        "Recall": 1.0,
-        "F1": 1.0,
-        "FPR": 0
+        "Precision": 0.0,
+        "Recall": 0,
+        "F1": 0,
+        "FPR": 1.0
       },
       "ranking": {
         "Precision@1": 1.0,
@@ -578,13 +499,13 @@
         "NDCG@5": 1.0
       },
       "calibration": {
-        "Brier_Score": 0.025363636363636363,
+        "Brier_Score": 0.6959833333333334,
         "table": [
           {
             "bin": "0.8-1.0",
-            "predicted_prob": 0.8467636363636363,
-            "actual_freq": 1.0,
-            "sample_count": 11
+            "predicted_prob": 0.8334416666666665,
+            "actual_freq": 0.0,
+            "sample_count": 12
           }
         ]
       },
@@ -618,8 +539,87 @@
           1.0
         ],
         "Brier_95CI": [
-          0.01860909090909091,
-          0.03156363636363636
+          0.6684,
+          0.7414666666666667
+        ]
+      },
+      "abstention": {
+        "rate": 0.0,
+        "accuracy_non_abstained_p5": 1.0,
+        "coverage": 1.0
+      }
+    },
+    "sleeper mule": {
+      "sample_count": 12,
+      "positives": 12,
+      "negatives": 0,
+      "confusion_matrix": {
+        "TP": 3,
+        "TN": 0,
+        "FP": 0,
+        "FN": 9
+      },
+      "classification": {
+        "Precision": 1.0,
+        "Recall": 0.25,
+        "F1": 0.4,
+        "FPR": 0
+      },
+      "ranking": {
+        "Precision@1": 1.0,
+        "Precision@5": 1.0,
+        "Recall@5": 1.0,
+        "NDCG@5": 1.0
+      },
+      "calibration": {
+        "Brier_Score": 0.23524166666666668,
+        "table": [
+          {
+            "bin": "0.4-0.6",
+            "predicted_prob": 0.48737,
+            "actual_freq": 1.0,
+            "sample_count": 10
+          },
+          {
+            "bin": "0.6-0.8",
+            "predicted_prob": 0.7101999999999999,
+            "actual_freq": 1.0,
+            "sample_count": 2
+          }
+        ]
+      },
+      "lead_time": {
+        "mean": 19.0,
+        "median": 19.0,
+        "p90": 19.0
+      },
+      "geo_error": {
+        "mean": 0.0,
+        "median": 0.0,
+        "p90": 0.0
+      },
+      "baseline": {
+        "Brier_Score": 0.25,
+        "Precision@1": 0.0,
+        "Precision@5": 0.0,
+        "Recall@5": 0.0
+      },
+      "uncertainty": {
+        "Precision@1_95CI": [
+          1.0,
+          1.0
+        ],
+        "Precision@5_95CI": [
+          1.0,
+          1.0
+        ],
+        "Recall@5_95CI": [
+          1.0,
+          1.0
+        ],
+        "Brier_95CI": [
+          0.18505833333333332,
+          0.27559999999999996
         ]
       },
       "abstention": {
