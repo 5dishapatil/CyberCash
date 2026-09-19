@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { FlaskConical, Play, RefreshCw, AlertCircle, Zap, Terminal, BookOpen, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { useNotificationStore } from '../store/notifications';
+import LiveScenarioModal from './LiveScenarioModal';
 
 export default function SimulationLab() {
   const [activeTab, setActiveTab] = useState('guide');
@@ -11,6 +12,9 @@ export default function SimulationLab() {
   const [demoStep, setDemoStep] = useState<number>(-1);
   const [demoRunning, setDemoRunning] = useState(false);
   const [demoTime, setDemoTime] = useState(0);
+
+  // Modal State
+  const [selectedScenario, setSelectedScenario] = useState<{id: number, name: string} | null>(null);
 
   useEffect(() => {
     // FIX: The correct endpoint is /api/scenarios
@@ -28,13 +32,8 @@ export default function SimulationLab() {
       .catch(e => console.error(e));
   }, []);
 
-  const triggerScenario = async (id: number) => {
-    try {
-      await fetch(`http://localhost:8000/api/simulation/scenario/${id}`, { method: 'POST' });
-      addToast(`Scenario ${id} has been injected into the engine.`, 'info');
-    } catch (e) {
-      addToast('Failed to trigger scenario.', 'error');
-    }
+  const triggerScenario = (id: number, name: string) => {
+    setSelectedScenario({ id, name });
   };
 
   const triggerAttack = async (action: string) => {
@@ -99,6 +98,16 @@ export default function SimulationLab() {
 
   return (
     <div className="flex h-full flex-col p-6 gap-6 relative animate-in fade-in duration-500">
+      
+      {/* RENDER MODAL IF SELECTED */}
+      {selectedScenario && (
+        <LiveScenarioModal 
+          scenarioId={selectedScenario.id} 
+          scenarioName={selectedScenario.name} 
+          onClose={() => setSelectedScenario(null)} 
+        />
+      )}
+
       <div className="flex justify-between items-center pb-4 border-b border-slate-800 shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -164,7 +173,7 @@ export default function SimulationLab() {
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="text-emerald-400 shrink-0 mt-0.5" size={20} />
                   <div>
-                    <strong className="text-slate-200">Trigger Scenarios:</strong> Head to the <em>Interactive Scenarios</em> tab and click a scenario. It injects transactions into the engine.
+                    <strong className="text-slate-200">Trigger Scenarios:</strong> Head to the <em>Interactive Scenarios</em> tab and click a scenario. It injects transactions into the engine and visualizes it live.
                   </div>
                 </li>
                 <li className="flex items-start gap-3">
@@ -189,7 +198,7 @@ export default function SimulationLab() {
           <div className="flex flex-col gap-8 animate-in slide-in-from-right-8 duration-300">
             <div>
               <h2 className="text-2xl font-semibold text-white mb-2">Interactive Scenarios</h2>
-              <p className="text-slate-400 max-w-3xl">Inject specific behavioral patterns into the simulation engine. The predictive model will automatically capture these transactions, build a graph, and generate incident reports.</p>
+              <p className="text-slate-400 max-w-3xl">Inject specific behavioral patterns into the simulation engine. Click a scenario to launch the live tracking modal, visualize network flows dynamically, and see mapping predictions on the go.</p>
             </div>
             
             <div className="space-y-6">
@@ -197,12 +206,12 @@ export default function SimulationLab() {
                 <h3 className="text-lg font-semibold text-emerald-400 mb-4 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-400"></div> Legitimate Behavior & False Positives</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {(legitScenarios || []).map(s => (
-                    <div key={s.id} className="bg-slate-800/80 border border-emerald-500/20 p-5 rounded-xl flex justify-between items-center group hover:border-emerald-500/60 hover:bg-slate-800 transition-all duration-300">
+                    <div key={s.id} onClick={() => triggerScenario(s.id, s.name)} className="cursor-pointer bg-slate-800/80 border border-emerald-500/20 p-5 rounded-xl flex justify-between items-center group hover:border-emerald-500/60 hover:bg-slate-800 transition-all duration-300">
                       <div>
                         <h4 className="text-white font-medium text-lg">Scenario {s.id}: {s.name}</h4>
                         <p className="text-sm text-slate-400 mt-1">{s.description}</p>
                       </div>
-                      <button onClick={() => triggerScenario(s.id)} className="p-3 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white rounded-full transition-all duration-300 transform group-hover:scale-110 shadow-lg"><Play size={20} fill="currentColor" /></button>
+                      <button className="p-3 bg-emerald-500/10 group-hover:bg-emerald-500 text-emerald-400 group-hover:text-white rounded-full transition-all duration-300 transform group-hover:scale-110 shadow-lg"><Play size={20} fill="currentColor" /></button>
                     </div>
                   ))}
                 </div>
@@ -212,14 +221,14 @@ export default function SimulationLab() {
                 <h3 className="text-lg font-semibold text-rose-400 mb-4 flex items-center gap-2 mt-8"><div className="w-2 h-2 rounded-full bg-rose-400"></div> Fraudulent & Adversarial Behavior</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {(fraudScenarios || []).map(s => (
-                    <div key={s.id} className="bg-slate-800/80 border border-rose-500/20 p-5 rounded-xl flex justify-between items-start flex-col group hover:border-rose-500/60 hover:bg-slate-800 transition-all duration-300 min-h-[160px]">
+                    <div key={s.id} onClick={() => triggerScenario(s.id, s.name)} className="cursor-pointer bg-slate-800/80 border border-rose-500/20 p-5 rounded-xl flex justify-between items-start flex-col group hover:border-rose-500/60 hover:bg-slate-800 transition-all duration-300 min-h-[160px]">
                       <div>
                         <h4 className="text-white font-medium text-lg mb-2">{s.name}</h4>
                         <p className="text-sm text-slate-400">{s.description}</p>
                       </div>
                       <div className="mt-4 w-full flex justify-between items-center">
                         <span className="text-xs font-mono text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-700">ID: {s.id}</span>
-                        <button onClick={() => triggerScenario(s.id)} className="p-2.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-full transition-all duration-300 transform group-hover:-translate-y-1 shadow-lg"><Play size={18} fill="currentColor" /></button>
+                        <button className="p-2.5 bg-rose-500/10 group-hover:bg-rose-500 text-rose-400 group-hover:text-white rounded-full transition-all duration-300 transform group-hover:-translate-y-1 shadow-lg"><Play size={18} fill="currentColor" /></button>
                       </div>
                     </div>
                   ))}
