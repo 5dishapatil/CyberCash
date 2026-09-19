@@ -1,17 +1,17 @@
 {
   "TEST 1 \u2014 LEGITIMATE TRANSACTION": {
     "status": "FAIL",
-    "error": "Scenario 2 trigger failed: Internal Server Error",
+    "error": "Expected low prob < 0.35, got 0.7375616214876249",
     "file": "app/simulator/engine.py",
     "fix": "Ensure scenario 2 generates LOW risk incident with no notifications."
   },
   "TEST 2 \u2014 CLASSIC FRAUD": {
     "status": "PASS",
-    "evidence": "Inc INC_6b147381: txs=4, preds=3, notifs=13, graph_nodes=5, funds_held=4 accounts, audit_hashes=verified"
+    "evidence": "Inc INC_eeee726f: txs=4, preds=3, notifs=13, graph_nodes=5, funds_held=4 accounts, audit_hashes=verified"
   },
   "TEST 3 \u2014 3-MINUTE CASHOUT": {
     "status": "PASS",
-    "evidence": "Inc INC_8b729687: top_k_terminals=[], confidence=0.35, action='Abstain from tactical terminal deployment; maintain regional...'"
+    "evidence": "Inc INC_d8a57bb7: top_k_terminals=[], confidence=0.35, action='Abstain from tactical terminal deployment; maintain regional...'"
   },
   "TEST 4 \u2014 ATM SWITCHING": {
     "status": "PASS",
@@ -25,11 +25,11 @@
   },
   "TEST 6 \u2014 CROSS-BANK": {
     "status": "PASS",
-    "evidence": "Inc INC_b5ba218e: Correlated cross-bank flow visible to I4C, Bank B0, Bank B1, and LEA correctly."
+    "evidence": "Inc INC_8f4de570: Correlated cross-bank flow visible to I4C, Bank B0, Bank B1, and LEA correctly."
   },
   "TEST 7 \u2014 NOTIFICATIONS": {
     "status": "PASS",
-    "evidence": "Dispatched 13 alerts across channels: {'WEBHOOK', 'EMAIL', 'WS_DASHBOARD', 'SMS'}, recipients: {'API', 'LEA', 'I4C', 'BANK'}, all marked SENT."
+    "evidence": "Dispatched 13 alerts across channels: {'WS_DASHBOARD', 'EMAIL', 'SMS', 'WEBHOOK'}, recipients: {'BANK', 'API', 'LEA', 'I4C'}, all marked SENT."
   },
   "TEST 8 \u2014 SECURITY": {
     "status": "PASS",
@@ -37,7 +37,7 @@
   },
   "TEST 9 \u2014 REPLAY": {
     "status": "FAIL",
-    "error": "Prediction probabilities differed: [0.6502185485738271, 0.8928319295134719, 0.8928319295134719] vs [0.9478464369215823, 0.8928319295134719, 0.8928319295134719]",
+    "error": "Transaction amounts differed: [] vs [480000.0, 160000.0, 160000.0, 160000.0]",
     "file": "app/simulator/engine.py",
     "fix": "Use deterministic Random(seed) instance for account, amount, and terminal selection."
   },
@@ -47,7 +47,7 @@
   },
   "TEST 11 \u2014 MODEL TRACE": {
     "status": "PASS",
-    "evidence": "Full trace exposed: model=V1.0 Calibrated Logistic, dataset=PUNE_SYNTH_V1_TEMPORAL, raw_score=2.45, prob=0.9208, ranking_count=0, actual_terminal=T0"
+    "evidence": "Full trace exposed: model=V1.0 Calibrated Logistic, dataset=PUNE_SYNTH_V1_TEMPORAL, raw_score=2.69, prob=0.9365, ranking_count=0, actual_terminal=T0"
   },
   "TEST 12 \u2014 EVALUATION": {
     "status": "PASS",
