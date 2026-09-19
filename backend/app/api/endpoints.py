@@ -4,6 +4,7 @@ from sqlalchemy import func, text
 from app.db.database import get_db
 from app.models.domain import Incident, Prediction, Transaction, Terminal, User, AuditLog, Withdrawal, Account
 from app.ml.evaluation import compute_incident_evaluation, compute_aggregate_metrics
+from app.api.auth import get_current_user, require_role
 from app.simulator.engine import engine
 from pydantic import BaseModel
 import datetime
@@ -122,40 +123,40 @@ def get_scenarios():
 
 # --- INCIDENT ACTIONS ---
 @router.post("/incidents/{incident_id}/acknowledge")
-def acknowledge_incident(incident_id: str, db: Session = Depends(get_db)):
+def acknowledge_incident(incident_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     inc = db.query(Incident).filter(Incident.id == incident_id).first()
     if not inc: raise HTTPException(404, "Not found")
     inc.status = "ACKNOWLEDGED"
-    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id="system", action="ACKNOWLEDGE", details=f"Incident {incident_id} acknowledged"))
+    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id=current_user.id, action="ACKNOWLEDGE", details=f"Incident {incident_id} acknowledged"))
     db.commit()
     return {"status": "acknowledged"}
 
 @router.post("/incidents/{incident_id}/assign")
-def assign_incident(incident_id: str, db: Session = Depends(get_db)):
+def assign_incident(incident_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     inc = db.query(Incident).filter(Incident.id == incident_id).first()
     if not inc: raise HTTPException(404, "Not found")
     inc.status = "ASSIGNED"
-    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id="system", action="ASSIGN", details=f"Incident {incident_id} assigned"))
+    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id=current_user.id, action="ASSIGN", details=f"Incident {incident_id} assigned"))
     db.commit()
     return {"status": "assigned"}
 
 @router.post("/incidents/{incident_id}/escalate")
-def escalate_incident(incident_id: str, db: Session = Depends(get_db)):
+def escalate_incident(incident_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     inc = db.query(Incident).filter(Incident.id == incident_id).first()
     if not inc: raise HTTPException(404, "Not found")
     inc.status = "IN_PROGRESS"
     inc.risk_level = "HIGH"
-    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id="system", action="ESCALATE", details=f"Incident {incident_id} escalated to LEA"))
+    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id=current_user.id, action="ESCALATE", details=f"Incident {incident_id} escalated to LEA"))
     db.commit()
     return {"status": "escalated"}
 
 @router.post("/incidents/{incident_id}/resolve")
-def resolve_incident(incident_id: str, db: Session = Depends(get_db)):
+def resolve_incident(incident_id: str, db: Session = Depends(get_db), current_user = Depends(require_role(["BANK", "LEA", "SUPERVISOR", "I4C"]))):
     inc = db.query(Incident).filter(Incident.id == incident_id).first()
     if not inc: raise HTTPException(404, "Not found")
     inc.status = "RESOLVED"
     inc.active = False
-    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id="system", action="RESOLVE", details=f"Incident {incident_id} resolved"))
+    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id=current_user.id, action="RESOLVE", details=f"Incident {incident_id} resolved"))
     db.commit()
     return {"status": "resolved"}
 

@@ -46,6 +46,13 @@ def generate_base_data(db, num_banks=10, num_accounts=1000, num_devices=500, num
         terminals.append(term)
     db.add_all(terminals)
     db.commit()
+    devices = []
+    for i in range(num_devices):
+        assoc_accs = [random.choice(accounts).id for _ in range(random.randint(1, 3))]
+        dev = Device(id=f"D{i}", device_type=random.choice(["MOBILE", "DESKTOP", "TABLET"]), associated_account_ids=assoc_accs, historical_usage=random.randint(10, 1000))
+        devices.append(dev)
+    db.add_all(devices)
+    db.commit()
     
     print("Generating Temporal Training Data (60 Days)...")
     start_time = datetime.datetime.now() - datetime.timedelta(days=60)
@@ -53,20 +60,20 @@ def generate_base_data(db, num_banks=10, num_accounts=1000, num_devices=500, num
     
     # Generate scenarios
     for _ in range(3000):
-        is_fraud = random.random() < 0.15
+        scenario_type = random.choices(["fraud", "hard_negative", "normal"], weights=[0.15, 0.10, 0.75])[0]
         
-        if is_fraud:
+        if scenario_type == "fraud":
             victim = random.choice(accounts)
             l1 = random.choice(accounts)
             l2_nodes = random.sample(accounts, 3)
             amount = random.uniform(50000, 500000)
             
             current_time += datetime.timedelta(minutes=random.randint(1, 30))
-            db.add(Transaction(id=f"TX_{uuid.uuid4().hex[:8]}", timestamp=current_time, source_account=victim.id, destination_account=l1.id, amount=amount, transaction_type="TRANSFER", bank_id=victim.bank_id, risk_signal="HIGH"))
+            db.add(Transaction(id=f"TX_{uuid.uuid4().hex[:8]}", timestamp=current_time, source_account=victim.id, destination_account=l1.id, amount=amount, transaction_type="TRANSFER", bank_id=victim.bank_id, risk_signal="HIGH", device_id=random.choice(devices).id))
             
             current_time += datetime.timedelta(minutes=random.randint(1, 10))
             for l2 in l2_nodes:
-                db.add(Transaction(id=f"TX_{uuid.uuid4().hex[:8]}", timestamp=current_time, source_account=l1.id, destination_account=l2.id, amount=amount/3, transaction_type="TRANSFER", bank_id=l1.bank_id, risk_signal="HIGH"))
+                db.add(Transaction(id=f"TX_{uuid.uuid4().hex[:8]}", timestamp=current_time, source_account=l1.id, destination_account=l2.id, amount=amount/3, transaction_type="TRANSFER", bank_id=l1.bank_id, risk_signal="HIGH", device_id=random.choice(devices).id))
             
             delay_mins = random.randint(15, 60)
             cashout_time = current_time + datetime.timedelta(minutes=delay_mins)
@@ -74,11 +81,33 @@ def generate_base_data(db, num_banks=10, num_accounts=1000, num_devices=500, num
             db.add(Withdrawal(id=f"WD_{uuid.uuid4().hex[:8]}", timestamp=cashout_time, account_id=l2_nodes[0].id, terminal_id=target_terminal.id, amount=amount/3, fraud_label=True))
             current_time = cashout_time
             
+        elif scenario_type == "hard_negative":
+            # Looks like a cascade (e.g. salary disbursement or legit business)
+            src = random.choice(accounts)
+            l1 = random.choice(accounts)
+            l2_nodes = random.sample(accounts, 3)
+            amount = random.uniform(100000, 1000000)
+            
+            current_time += datetime.timedelta(minutes=random.randint(1, 30))
+            db.add(Transaction(id=f"TX_{uuid.uuid4().hex[:8]}", timestamp=current_time, source_account=src.id, destination_account=l1.id, amount=amount, transaction_type="TRANSFER", bank_id=src.bank_id, risk_signal="MEDIUM", device_id=random.choice(devices).id))
+            
+            current_time += datetime.timedelta(minutes=random.randint(1, 10))
+            for l2 in l2_nodes:
+                db.add(Transaction(id=f"TX_{uuid.uuid4().hex[:8]}", timestamp=current_time, source_account=l1.id, destination_account=l2.id, amount=amount/3, transaction_type="TRANSFER", bank_id=l1.bank_id, risk_signal="LOW", device_id=random.choice(devices).id))
+                
+            # No immediate cashout, or if there is, it's legitimate
+            if random.random() < 0.2:
+                delay_mins = random.randint(120, 1440) # 2 hours to 1 day later
+                cashout_time = current_time + datetime.timedelta(minutes=delay_mins)
+                target_terminal = random.choice(terminals)
+                db.add(Withdrawal(id=f"WD_{uuid.uuid4().hex[:8]}", timestamp=cashout_time, account_id=l2_nodes[0].id, terminal_id=target_terminal.id, amount=amount/6, fraud_label=False))
+                current_time = cashout_time
+                
         else:
             src, dst = random.sample(accounts, 2)
             amount = random.uniform(500, 15000)
             current_time += datetime.timedelta(minutes=random.randint(1, 30))
-            db.add(Transaction(id=f"TX_{uuid.uuid4().hex[:8]}", timestamp=current_time, source_account=src.id, destination_account=dst.id, amount=amount, transaction_type="TRANSFER", bank_id=src.bank_id, risk_signal="LOW"))
+            db.add(Transaction(id=f"TX_{uuid.uuid4().hex[:8]}", timestamp=current_time, source_account=src.id, destination_account=dst.id, amount=amount, transaction_type="TRANSFER", bank_id=src.bank_id, risk_signal="LOW", device_id=random.choice(devices).id))
             
             if random.random() < 0.1:
                 current_time += datetime.timedelta(minutes=random.randint(30, 300))
