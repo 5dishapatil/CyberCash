@@ -337,18 +337,19 @@ except Exception as e:
 print("\n--- RUNNING TEST 9: DETERMINISTIC REPLAY ---", flush=True)
 try:
     SEED = 9999
+    # Run 1
     status1, res1 = api_post(f"/simulation/scenario/3?seed={SEED}")
     inc_id_1 = res1.get("incident_id")
+    status, timeline1 = api_get(f"/incidents/{inc_id_1}/timeline")
+    status, incs1 = api_get("/incidents", token_i4c)
+    inc1 = next((i for i in incs1 if i["id"] == inc_id_1), None)
     
+    # Run 2
     status2, res2 = api_post(f"/simulation/scenario/3?seed={SEED}")
     inc_id_2 = res2.get("incident_id")
-    
-    status, incs = api_get("/incidents", token_i4c)
-    inc1 = next((i for i in incs if i["id"] == inc_id_1), None)
-    inc2 = next((i for i in incs if i["id"] == inc_id_2), None)
-    
-    status, timeline1 = api_get(f"/incidents/{inc_id_1}/timeline")
     status, timeline2 = api_get(f"/incidents/{inc_id_2}/timeline")
+    status, incs2 = api_get("/incidents", token_i4c)
+    inc2 = next((i for i in incs2 if i["id"] == inc_id_2), None)
     
     txs1 = [t["data"]["amount"] for t in timeline1 if t["type"] == "TRANSACTION"]
     txs2 = [t["data"]["amount"] for t in timeline2 if t["type"] == "TRANSACTION"]

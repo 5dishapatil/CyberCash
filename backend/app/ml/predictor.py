@@ -22,8 +22,13 @@ def predict_cashout(db: Session, account_id: str, simulation_time):
     # Feature 1: Velocity signal - rapid inbound transactions in 5 min
     f1 = min(1.0, velocity_5m / 5.0)
 
-    # Feature 2: High inbound amount in 5 min (e.g. >50k = high risk)
-    f2 = min(1.0, amount_5m / 500000.0)
+    # Feature 2: High inbound amount in 5 min
+    # If there is no mule fan-out (fan_out == 0) and low velocity (velocity_5m <= 1),
+    # an isolated large amount is a normal legitimate remittance, not a mule cascade.
+    if fan_out == 0 and velocity_5m <= 1:
+        f2 = 0.05 * min(1.0, amount_5m / 500000.0)
+    else:
+        f2 = min(1.0, amount_5m / 500000.0)
 
     # Feature 3: Fan-out to multiple receivers (mule distribution pattern)
     f3 = min(1.0, fan_out / 5.0)

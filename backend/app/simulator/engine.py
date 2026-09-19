@@ -59,7 +59,7 @@ class SimulationEngine:
         radius_km = (max_travel_time / 60.0) * 30.0 if max_travel_time > 0 else 10.0
         
         # Abstention handling
-        is_abstained = (loc_conf == "ABSTAIN" or loc_conf == "LOW")
+        is_abstained = (loc_conf == "ABSTAIN")
         top_candidates = [] if is_abstained else terminals
         conf_score = 0.35 if is_abstained else (0.85 if loc_conf == "HIGH" else 0.60)
         action = (
@@ -107,9 +107,10 @@ class SimulationEngine:
         mules = actors[1:5]
         
         if seed is not None:
+            # Deterministic simulation time window
             self.simulation_time = datetime.datetime(2026, 6, 1, 10, 0, 0)
-            mule_ids = [m.id for m in mules]
-            db.query(Transaction).filter(Transaction.destination_account.in_(mule_ids), Transaction.risk_signal == "HIGH").delete(synchronize_session=False)
+            # Clear replay window so Run 2 executes on clean baseline
+            db.query(Transaction).filter(Transaction.timestamp >= datetime.datetime(2026, 6, 1, 9, 0, 0), Transaction.timestamp <= datetime.datetime(2026, 6, 1, 12, 0, 0)).delete(synchronize_session=False)
             db.commit()
         
         # ── SCENARIO 1: NORMAL ACTIVITY ─────────────────────────────────────
