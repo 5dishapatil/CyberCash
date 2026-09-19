@@ -201,7 +201,7 @@ export default function ModelOps() {
           <p><strong className="text-white">Heuristic Only:</strong> The current system is a manually calibrated linear combination of features passed through a logistic sigmoid. It is NOT a learned decision tree, neural network, or ensemble model. There is no continuous learning or reinforcement learning present in the codebase.</p>
           <p><strong className="text-white">Synthetic Graph Limits:</strong> Results are evaluated against synthetic Pune region banking logic. Real-world fraud patterns exhibit significantly higher concept drift, class imbalance, and data noise not captured by the `SimulationEngine`.</p>
           <p><strong className="text-white">Evaluation Unit:</strong> Metrics are computed per incident (aggregate prediction over a sequence of related transactions), not per individual transaction.</p>
-          <p><strong className="text-white">Threshold:</strong> The current confusion matrix utilizes a hard decision threshold of `>0.50` probability.</p>
+          <p><strong className="text-white">Threshold:</strong> The current confusion matrix utilizes a hard decision threshold of `&gt;0.50` probability.</p>
         </div>
       </section>
     </div>
