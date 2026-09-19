@@ -164,17 +164,25 @@ export default function CommandCentre() {
       {/* Simulation Controls */}
       <div className="absolute bottom-6 right-6 bg-slate-900 border border-slate-700 rounded-full shadow-lg shadow-black/50 p-2 flex items-center gap-4 z-50">
         <div className="px-3 font-mono text-xs text-cyan-400 border-r border-slate-700">
-          {simulation?.current_time || '2025-03-01 14:00:00'}
+          {simulation?.simulation_time ? new Date(simulation.simulation_time).toISOString().replace('T', ' ').substring(0, 19) : '2025-03-01 14:00:00'}
         </div>
         <div className="flex items-center gap-2 pr-2">
-          <button className="p-1.5 hover:bg-slate-800 rounded-full text-slate-300 hover:text-white transition-colors"><RotateCcw size={16} /></button>
-          <button className="p-1.5 hover:bg-slate-800 rounded-full text-slate-300 hover:text-white transition-colors"><Pause size={16} /></button>
-          <button className="p-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 rounded-full text-cyan-400 transition-colors"><Play size={16} fill="currentColor" /></button>
-          <select className="bg-slate-800 text-xs text-white border-none rounded px-2 py-1 ml-2 outline-none">
-            <option>1x</option>
-            <option>5x</option>
-            <option>10x</option>
-            <option>60x</option>
+          <button onClick={() => fetch('http://localhost:8000/api/simulation/reset', {method:'POST'}).then(fetchData)} className="p-1.5 hover:bg-slate-800 rounded-full text-slate-300 hover:text-white transition-colors"><RotateCcw size={16} /></button>
+          {simulation?.status === 'RUNNING' ? (
+            <button onClick={() => fetch('http://localhost:8000/api/simulation/pause', {method:'POST'}).then(fetchData)} className="p-1.5 hover:bg-slate-800 rounded-full text-slate-300 hover:text-white transition-colors"><Pause size={16} /></button>
+          ) : (
+            <button onClick={() => fetch('http://localhost:8000/api/simulation/start', {method:'POST'}).then(fetchData)} className="p-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 rounded-full text-cyan-400 transition-colors"><Play size={16} fill="currentColor" /></button>
+          )}
+          <select 
+            value={simulation?.speed || 1}
+            onChange={(e) => {
+              fetch(`http://localhost:8000/api/simulation/speed?speed=${e.target.value}`, {method:'POST'}).then(fetchData);
+            }}
+            className="bg-slate-800 text-xs text-white border-none rounded px-2 py-1 ml-2 outline-none">
+            <option value="1">1x</option>
+            <option value="5">5x</option>
+            <option value="10">10x</option>
+            <option value="20">20x</option>
           </select>
         </div>
       </div>

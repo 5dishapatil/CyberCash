@@ -24,11 +24,23 @@ interface MapProps {
 }
 
 export default function MapComponent({ incidents = [], predictions = [], onIncidentClick }: MapProps) {
-  const center: [number, number] = [18.5204, 73.8567]; // Pune center
+  let center: [number, number] = [18.5204, 73.8567]; // Pune center
+  if (predictions.length > 0 && predictions[0].top_k_terminals && predictions[0].top_k_terminals.length > 0) {
+    center = [predictions[0].top_k_terminals[0].lat, predictions[0].top_k_terminals[0].lng];
+  }
 
   return (
-    <MapContainer center={center} zoom={11} style={{ height: '100%', width: '100%' }} zoomControl={false}>
-      <TileLayer attribution='&copy; OSM' url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+    <MapContainer 
+      center={center} 
+      zoom={12} 
+      style={{ height: '100%', width: '100%', background: '#0b1120' }}
+      zoomControl={false}
+    >
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        className="map-tiles"
+      />
       
       {incidents.map((inc) => {
         // Find predictions for this incident
