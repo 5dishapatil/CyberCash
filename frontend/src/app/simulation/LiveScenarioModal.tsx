@@ -50,7 +50,13 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
     fetch(`http://localhost:8000/api/simulation/scenario/${scenarioId}`, { method: 'POST' })
       .then(r => r.json())
       .then(data => {
-        setIncidentId(data.incident_id);
+        if (!data.incident_id) {
+          // Normal behavior doesn't trigger an incident
+          setIncidentId(null);
+          setLoading(false);
+        } else {
+          setIncidentId(data.incident_id);
+        }
       })
       .catch(console.error);
   }, [scenarioId]);
@@ -63,7 +69,6 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
       .then(r => r.json())
       .then(data => {
         const _nodes = data.nodes || [];
-        // If data.nodes is a dict (like python output sometimes), convert to array
         const nodesArray = Array.isArray(_nodes) ? _nodes : Object.values(_nodes);
         const _edges = data.edges || [];
         
@@ -101,12 +106,11 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
         setFullEdges(edgeLayout);
 
         // Fetch ATMS from predictions
-        fetch(`http://localhost:8000/api/incidents/${incidentId}`)
+        fetch(`http://localhost:8000/api/predictions/${incidentId}`)
           .then(r => r.json())
-          .then(inc => {
-            const preds = inc.predictions || [];
-            if (preds.length > 0) {
-              const latest = preds[preds.length - 1];
+          .then(preds => {
+            if (Array.isArray(preds) && preds.length > 0) {
+              const latest = preds[0]; // desc sorted by API
               const topK = latest.top_k_terminals || [];
               
               // Map lat/lon from allTerminalMap
@@ -120,21 +124,17 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
               });
               
               setTerminals(mappedTerminals);
-              if (scenarioId <= 2 || scenarioId === 10) {
-                 // Not historical
-                 setPredictedAtm(null);
-              } else {
-                 setPredictedAtm(mappedTerminals[0]);
-              }
+              // We always highlight predicted atm if there's any scenario where we predict
+              // The user wants it highlighted AFTER prediction in EVERY scenario where applicable
+              setPredictedAtm(mappedTerminals[0] || null);
             } else {
-              // No predictions (maybe normal activity)
               setTerminals([]);
             }
             setLoading(false);
           });
       })
       .catch(console.error);
-  }, [incidentId, allTerminalMap, scenarioId]);
+  }, [incidentId, allTerminalMap]);
 
   // Real-time animation loop (Faster: 600ms per step)
   useEffect(() => {
