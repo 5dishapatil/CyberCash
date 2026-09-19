@@ -11,6 +11,7 @@ const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), 
 const CircleMarker = dynamic(() => import('react-leaflet').then(m => m.CircleMarker), { ssr: false });
 const Popup = dynamic(() => import('react-leaflet').then(m => m.Popup), { ssr: false });
 const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false });
+const Rectangle = dynamic(() => import('react-leaflet').then(m => m.Rectangle), { ssr: false });
 
 import 'leaflet/dist/leaflet.css';
 
@@ -32,9 +33,20 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
   const [visibleEdges, setVisibleEdges] = useState<Edge[]>([]);
   const [terminals, setTerminals] = useState<any[]>([]);
   const [predictedAtm, setPredictedAtm] = useState<any>(null);
+  const [allTerminalMap, setAllTerminalMap] = useState<Record<string, any>>({});
 
   useEffect(() => {
-    // 1. Trigger Scenario
+    // 1. Fetch all terminals for map coordinates
+    fetch('http://localhost:8000/api/terminals')
+      .then(r => r.json())
+      .then(data => {
+        const tMap: Record<string, any> = {};
+        data.forEach((t: any) => { tMap[t.id] = t; });
+        setAllTerminalMap(tMap);
+      })
+      .catch(console.error);
+
+    // 2. Trigger Scenario
     fetch(`http://localhost:8000/api/simulation/scenario/${scenarioId}`, { method: 'POST' })
       .then(r => r.json())
       .then(data => {
@@ -44,17 +56,19 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
   }, [scenarioId]);
 
   useEffect(() => {
-    if (!incidentId) return;
+    if (!incidentId || Object.keys(allTerminalMap).length === 0) return;
 
-    // 2. Fetch Graph Data
+    // 3. Fetch Graph Data
     fetch(`http://localhost:8000/api/incidents/${incidentId}/graph`)
       .then(r => r.json())
       .then(data => {
         const _nodes = data.nodes || [];
+        // If data.nodes is a dict (like python output sometimes), convert to array
+        const nodesArray = Array.isArray(_nodes) ? _nodes : Object.values(_nodes);
         const _edges = data.edges || [];
         
         // Arrange nodes roughly
-        const nodeLayout = _nodes.map((n: any, i: number) => {
+        const nodeLayout = nodesArray.map((n: any, i: number) => {
            let x = 100 + (i % 3) * 200;
            let y = 100 + Math.floor(i / 3) * 150;
            return {
@@ -74,7 +88,7 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
         });
 
         const edgeLayout = _edges.map((e: any) => ({
-           id: e.id,
+           id: e.id || e.source + e.target,
            source: e.source,
            target: e.target,
            label: e.label,
@@ -93,23 +107,38 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
             const preds = inc.predictions || [];
             if (preds.length > 0) {
               const latest = preds[preds.length - 1];
-              setTerminals(latest.top_k_terminals || []);
+              const topK = latest.top_k_terminals || [];
+              
+              // Map lat/lon from allTerminalMap
+              const mappedTerminals = topK.map((tk: any) => {
+                const tInfo = allTerminalMap[tk.terminal_id];
+                return {
+                  ...tk,
+                  lat: tInfo?.latitude || 18.5204,
+                  lon: tInfo?.longitude || 73.8567
+                };
+              });
+              
+              setTerminals(mappedTerminals);
               if (scenarioId <= 2 || scenarioId === 10) {
                  // Not historical
                  setPredictedAtm(null);
               } else {
-                 setPredictedAtm(latest.top_k_terminals?.[0]);
+                 setPredictedAtm(mappedTerminals[0]);
               }
+            } else {
+              // No predictions (maybe normal activity)
+              setTerminals([]);
             }
             setLoading(false);
           });
       })
       .catch(console.error);
-  }, [incidentId]);
+  }, [incidentId, allTerminalMap, scenarioId]);
 
-  // Real-time animation loop
+  // Real-time animation loop (Faster: 600ms per step)
   useEffect(() => {
-    if (loading || fullEdges.length === 0) return;
+    if (loading) return; // run even if fullEdges is empty
 
     const interval = setInterval(() => {
       setStep(prev => {
@@ -120,7 +149,7 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
         
         // Add glowing effect to the latest edge
         const animatedEdges = currentEdges.map((e, idx) => {
-           if (idx === currentEdges.length - 1) {
+           if (idx === currentEdges.length - 1 && currentEdges.length > 0) {
              return { ...e, style: { stroke: '#f43f5e', strokeWidth: 4, filter: 'drop-shadow(0 0 5px #f43f5e)' } };
            }
            return e;
@@ -133,14 +162,17 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
           connectedNodeIds.add(e.target);
         });
 
-        // Also add root nodes if no edges yet
-        if (currentEdges.length === 0 && fullNodes.length > 0) {
+        // Add root nodes if no edges or to ensure all nodes eventually show
+        // If graph has no edges, just show all nodes immediately
+        if (fullEdges.length === 0) {
+          fullNodes.forEach(n => connectedNodeIds.add(n.id));
+        } else if (currentEdges.length === 0 && fullNodes.length > 0) {
           connectedNodeIds.add(fullNodes[0].id);
         }
 
         const currentNodes = fullNodes.filter(n => connectedNodeIds.has(n.id)).map(n => {
            // Highlight next prediction if historical
-           if (predictedAtm && n.id === predictedAtm.terminal_id) {
+           if (predictedAtm && n.id === predictedAtm.terminal_id && nextStep > fullEdges.length) {
              return {
                ...n,
                style: { ...n.style, border: '2px solid #fbbf24', boxShadow: '0 0 15px rgba(251,191,36,0.5)' },
@@ -157,15 +189,17 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
         setVisibleEdges(animatedEdges);
         setVisibleNodes(currentNodes);
 
-        if (nextStep > fullEdges.length + 2) {
+        if (nextStep > Math.max(fullEdges.length, 1) + 2) {
           clearInterval(interval);
         }
         return nextStep;
       });
-    }, 1500);
+    }, 600); // Faster execution
 
     return () => clearInterval(interval);
   }, [loading, fullEdges, fullNodes, predictedAtm]);
+
+  const showPrediction = step > fullEdges.length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
@@ -204,19 +238,25 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
                   <span className="text-xs font-semibold text-slate-300">Dynamic Money Flow</span>
                 </div>
                 
-                <ReactFlow 
-                  nodes={visibleNodes} 
-                  edges={visibleEdges} 
-                  fitView 
-                  className="bg-slate-950"
-                  proOptions={{ hideAttribution: true }}
-                >
-                  <Background color="#1e293b" gap={16} />
-                  <Controls className="bg-slate-800 border-slate-700 fill-white" />
-                </ReactFlow>
+                {fullNodes.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-slate-500">
+                    No anomalous transactions detected in this scenario.
+                  </div>
+                ) : (
+                  <ReactFlow 
+                    nodes={visibleNodes} 
+                    edges={visibleEdges} 
+                    fitView 
+                    className="bg-slate-950"
+                    proOptions={{ hideAttribution: true }}
+                  >
+                    <Background color="#1e293b" gap={16} />
+                    <Controls className="bg-slate-800 border-slate-700 fill-white" />
+                  </ReactFlow>
+                )}
 
                 {/* OVERLAY FOR HISTORICAL PREDICTION */}
-                {predictedAtm && step > fullEdges.length - 2 && (
+                {predictedAtm && showPrediction && (
                    <div className="absolute bottom-4 left-4 z-10 bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl backdrop-blur-md max-w-sm animate-in slide-in-from-bottom-4">
                       <h4 className="text-amber-400 font-bold text-sm mb-1">Historical Pattern Detected</h4>
                       <p className="text-xs text-slate-300">System recognizes behavioral sequence. Next likely cashout terminal highlighted.</p>
@@ -224,9 +264,9 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
                 )}
                 
                 {/* OVERLAY FOR NEW PATTERN */}
-                {!predictedAtm && step > 0 && (
+                {!predictedAtm && step > 0 && fullEdges.length > 0 && (
                    <div className="absolute bottom-4 left-4 z-10 bg-cyan-500/10 border border-cyan-500/30 p-3 rounded-xl backdrop-blur-md max-w-sm animate-in slide-in-from-bottom-4">
-                      <h4 className="text-cyan-400 font-bold text-sm mb-1">Evolving Pattern (Nodes added on the go)</h4>
+                      <h4 className="text-cyan-400 font-bold text-sm mb-1">Evolving Pattern</h4>
                       <p className="text-xs text-slate-300">Live dynamic graph construction as funds transfer through intermediate accounts.</p>
                    </div>
                 )}
@@ -246,30 +286,46 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
                   zoomControl={false}
                 >
                   <TileLayer
-                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                    attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   />
-                  {terminals.map((t: any, idx: number) => {
+                  
+                  {/* Show ATMs and Red Highlight Box AFTER prediction is made (step > edges length) */}
+                  {showPrediction && terminals.map((t: any, idx: number) => {
                      // Red for critical (idx 0), Ochre for medium (idx > 0)
                      const isCritical = idx === 0;
-                     const color = isCritical ? '#f43f5e' : '#d97706';
+                     const color = isCritical ? '#ef4444' : '#d97706';
+                     
+                     // Calculate a bounding box for the red box requirement
+                     const bounds: [[number, number], [number, number]] = [
+                       [t.lat - 0.005, t.lon - 0.005],
+                       [t.lat + 0.005, t.lon + 0.005]
+                     ];
+
                      return (
-                       <CircleMarker
-                         key={idx}
-                         center={[t.lat, t.lon]}
-                         radius={isCritical ? 12 : 8}
-                         pathOptions={{
-                           color: color,
-                           fillColor: color,
-                           fillOpacity: isCritical ? 0.6 : 0.4,
-                           weight: 2
-                         }}
-                       >
-                         <Popup className="bg-slate-900 text-white border-slate-700">
-                           <div className="text-xs font-semibold">{t.terminal_id}</div>
-                           <div className="text-xs opacity-80">Prob: {(t.probability * 100).toFixed(1)}%</div>
-                         </Popup>
-                       </CircleMarker>
+                       <div key={idx}>
+                         {isCritical && (
+                           <Rectangle 
+                             bounds={bounds} 
+                             pathOptions={{ color: '#ef4444', weight: 2, fillOpacity: 0.1, dashArray: '4' }} 
+                           />
+                         )}
+                         <CircleMarker
+                           center={[t.lat, t.lon]}
+                           radius={isCritical ? 12 : 8}
+                           pathOptions={{
+                             color: color,
+                             fillColor: color,
+                             fillOpacity: isCritical ? 0.8 : 0.6,
+                             weight: 2
+                           }}
+                         >
+                           <Popup className="bg-slate-900 text-white border-slate-700">
+                             <div className="text-xs font-semibold">{t.terminal_id}</div>
+                             <div className="text-xs opacity-80">Prob: {(t.prob * 100).toFixed(1)}%</div>
+                           </Popup>
+                         </CircleMarker>
+                       </div>
                      );
                   })}
                 </MapContainer>
