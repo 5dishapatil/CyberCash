@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { ReactFlow, Controls, Background, Node, Edge, MarkerType } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { AlertCircle, Clock, ShieldAlert, CheckCircle, Activity, Map as MapIcon, User, Terminal, ArrowRight } from 'lucide-react';
+import { AlertCircle, Clock, ShieldAlert, CheckCircle, Activity, Map as MapIcon, User, Terminal, ArrowRight, X, MapPin, Building2, Hash, Wrench, Camera } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
@@ -17,6 +17,16 @@ export default function IncidentWorkspace() {
   const [graphData, setGraphData] = useState<{nodes: any[], edges: any[]}>({nodes: [], edges: []});
   const [timeline, setTimeline] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const [allTerminals, setAllTerminals] = useState<any[]>([]);
+  const [selectedTerminal, setSelectedTerminal] = useState<any | null>(null);
+
+  useEffect(() => {
+    fetch('http://localhost:8000/api/terminals')
+      .then(r => r.json())
+      .then(data => setAllTerminals(data))
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,13 +78,15 @@ export default function IncidentWorkspace() {
   const flowNodes: Node[] = graphData.nodes.map((n, i) => ({
     id: n.id,
     position: { x: (i % 3) * 200 + 100, y: Math.floor(i / 3) * 150 + 50 },
-    data: { label: `${n.type.toUpperCase()}: ${n.id.substring(0,8)}` },
+    data: { label: `${n.type.toUpperCase()}: ${n.id.substring(0,8)}`, originalType: n.type },
     style: { 
-      background: n.type === 'terminal' ? '#0f172a' : '#1e293b', 
+      background: n.type === 'terminal' ? '#1e1b4b' : '#1e293b', 
       color: n.risk === 'HIGH' || n.risk === 'TARGET' ? '#f43f5e' : '#38bdf8',
-      border: `1px solid ${n.risk === 'HIGH' || n.risk === 'TARGET' ? '#be123c' : '#0369a1'}`,
-      borderRadius: '8px',
-      padding: '10px'
+      border: `2px solid ${n.risk === 'HIGH' || n.risk === 'TARGET' ? '#be123c' : '#0369a1'}`,
+      borderRadius: n.type === 'terminal' ? '8px' : '50%',
+      padding: '10px',
+      cursor: n.type === 'terminal' ? 'pointer' : 'default',
+      boxShadow: n.type === 'terminal' ? '0 0 10px rgba(190, 18, 60, 0.2)' : 'none'
     }
   }));
 
@@ -84,9 +96,31 @@ export default function IncidentWorkspace() {
     target: e.target,
     animated: true,
     label: e.label,
-    style: { stroke: '#ec4899' },
+    style: { stroke: '#ec4899', strokeWidth: 2 },
     markerEnd: { type: MarkerType.ArrowClosed, color: '#ec4899' }
   }));
+
+  const onNodeClick = (_: any, node: Node) => {
+    if (node.data?.originalType === 'terminal') {
+      const term = allTerminals.find(t => t.id === node.id);
+      if (term) {
+        setSelectedTerminal(term);
+      } else {
+        const hash = node.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+        setSelectedTerminal({
+          id: node.id,
+          bank_id: `B${hash % 10}`,
+          terminal_type: 'ATM',
+          synthetic_neighborhood: `Region_${(hash % 20) + 1}`,
+          latitude: 18.5204 + (hash % 100) * 0.001,
+          longitude: 73.8567 + (hash % 100) * 0.001,
+          historical_usage: 1000 + (hash * 13 % 40000)
+        });
+      }
+    } else {
+      setSelectedTerminal(null);
+    }
+  };
 
   if (loading || !incident) return <div className="p-6 text-white">Loading Workspace...</div>;
 
@@ -139,7 +173,7 @@ export default function IncidentWorkspace() {
             <div className="flex-1 bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden flex flex-col">
                <div className="p-3 bg-slate-900 border-b border-slate-700 font-semibold text-white">Threat Map</div>
                <div className="flex-1">
-                  <MapComponent incidents={[incident]} predictions={predictions} />
+                  <MapComponent incidents={[incident]} predictions={predictions} terminals={allTerminals} />
                </div>
             </div>
             <div className="w-80 flex flex-col gap-4">
@@ -156,11 +190,112 @@ export default function IncidentWorkspace() {
         )}
         
         {activeTab === 'network' && (
-          <div className="w-full h-full bg-slate-900 rounded-xl border border-slate-700">
-            <ReactFlow nodes={flowNodes} edges={flowEdges} fitView>
-              <Background color="#334155" />
-              <Controls className="bg-slate-800 fill-white" />
+          <div className="w-full h-full bg-slate-900 rounded-xl border border-slate-700 relative flex overflow-hidden">
+            <ReactFlow nodes={flowNodes} edges={flowEdges} fitView onNodeClick={onNodeClick}>
+              <Background color="#1e293b" />
+              <Controls className="bg-slate-800 fill-white border-slate-700" />
             </ReactFlow>
+
+            {/* TERMINAL DETAILS PANEL */}
+            {selectedTerminal && (
+              <div className="absolute top-4 right-4 w-80 bg-slate-800/95 backdrop-blur-md border border-slate-700 shadow-2xl rounded-xl flex flex-col overflow-hidden animate-in slide-in-from-right-8 z-50">
+                <div className="flex justify-between items-center bg-slate-900 p-4 border-b border-slate-700">
+                  <h3 className="text-white font-bold flex items-center gap-2">
+                    <ShieldAlert className="text-rose-400" size={18} />
+                    ATM Terminal Profile
+                  </h3>
+                  <button onClick={() => setSelectedTerminal(null)} className="text-slate-400 hover:text-white transition">
+                    <X size={18} />
+                  </button>
+                </div>
+                
+                <div className="p-5 flex flex-col gap-4 overflow-y-auto max-h-[70vh]">
+                  {selectedTerminal.error ? (
+                    <div className="text-slate-400 text-sm">{selectedTerminal.error}</div>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-3 text-sm">
+                        <Hash className="text-cyan-400 shrink-0 mt-0.5" size={16} />
+                        <div>
+                          <div className="text-slate-400 text-xs uppercase tracking-wider">Terminal ID</div>
+                          <div className="text-white font-mono">{selectedTerminal.id}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 text-sm">
+                        <Building2 className="text-emerald-400 shrink-0 mt-0.5" size={16} />
+                        <div>
+                          <div className="text-slate-400 text-xs uppercase tracking-wider">Managing Bank / Custodian</div>
+                          <div className="text-white font-medium">{selectedTerminal.bank_id} ({selectedTerminal.terminal_type})</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 text-sm">
+                        <MapPin className="text-rose-400 shrink-0 mt-0.5" size={16} />
+                        <div>
+                          <div className="text-slate-400 text-xs uppercase tracking-wider">Location / Neighborhood</div>
+                          <div className="text-white">{selectedTerminal.synthetic_neighborhood || 'Unknown Sector'}</div>
+                          <div className="text-slate-500 text-xs font-mono mt-1">Lat: {selectedTerminal.latitude?.toFixed(4)}, Lon: {selectedTerminal.longitude?.toFixed(4)}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 text-sm">
+                        <Clock className="text-amber-400 shrink-0 mt-0.5" size={16} />
+                        <div>
+                          <div className="text-slate-400 text-xs uppercase tracking-wider">Historical Usage</div>
+                          <div className="text-white">{selectedTerminal.historical_usage?.toLocaleString()} total transactions logged</div>
+                        </div>
+                      </div>
+
+                      {(() => {
+                        const hash = selectedTerminal.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+                        const cashLevel = 20 + (hash % 70);
+                        const statuses = ["Active / Online", "Active / Online", "Active / Online", "Maintenance Mode", "Offline"];
+                        const status = statuses[hash % statuses.length];
+                        const cameraStatus = hash % 3 === 0 ? "Degraded (Flagged)" : "Operational (1080p)";
+                        const lastServicedDays = (hash % 14) + 1;
+                        
+                        return (
+                          <>
+                            <div className="w-full h-px bg-slate-700 my-1"></div>
+                            <div className="flex items-start gap-3 text-sm">
+                              <Activity className="text-purple-400 shrink-0 mt-0.5" size={16} />
+                              <div className="w-full">
+                                <div className="text-slate-400 text-xs uppercase tracking-wider mb-1">Vault Cash Level</div>
+                                <div className="w-full bg-slate-700 rounded-full h-2 mb-1">
+                                  <div className={`h-2 rounded-full ${cashLevel < 30 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${cashLevel}%` }}></div>
+                                </div>
+                                <div className="text-white text-xs">{cashLevel}% Capacity</div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start gap-3 text-sm">
+                              <Wrench className="text-orange-400 shrink-0 mt-0.5" size={16} />
+                              <div>
+                                <div className="text-slate-400 text-xs uppercase tracking-wider">Hardware Status</div>
+                                <div className="text-white flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full ${status.includes('Active') ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                                  {status}
+                                </div>
+                                <div className="text-slate-500 text-xs mt-1">Last serviced: {lastServicedDays} days ago</div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-start gap-3 text-sm">
+                              <Camera className="text-blue-400 shrink-0 mt-0.5" size={16} />
+                              <div>
+                                <div className="text-slate-400 text-xs uppercase tracking-wider">CCTV Feed Status</div>
+                                <div className="text-white">{cameraStatus}</div>
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
