@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { ReactFlow, Controls, Background, Node, Edge, MarkerType } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { GitBranch, Filter, Loader, X, MapPin, Building2, Clock, Hash, ShieldAlert } from 'lucide-react';
+import { GitBranch, Filter, Loader, X, MapPin, Building2, Clock, Hash, ShieldAlert, Activity, Wrench, Camera } from 'lucide-react';
 
 export default function NetworkAnalysis() {
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -134,7 +134,7 @@ export default function NetworkAnalysis() {
               </button>
             </div>
             
-            <div className="p-5 flex flex-col gap-4">
+            <div className="p-5 flex flex-col gap-4 overflow-y-auto max-h-[70vh]">
               {selectedTerminal.error ? (
                 <div className="text-slate-400 text-sm">{selectedTerminal.error}</div>
               ) : (
@@ -171,6 +171,53 @@ export default function NetworkAnalysis() {
                       <div className="text-white">{selectedTerminal.historical_usage?.toLocaleString()} total transactions logged</div>
                     </div>
                   </div>
+
+                  {(() => {
+                    // Generate deterministic random-looking data based on terminal ID
+                    const hash = selectedTerminal.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+                    const cashLevel = 20 + (hash % 70); // 20% to 90%
+                    const statuses = ["Active / Online", "Active / Online", "Active / Online", "Maintenance Mode", "Offline"];
+                    const status = statuses[hash % statuses.length];
+                    const cameraStatus = hash % 3 === 0 ? "Degraded (Flagged)" : "Operational (1080p)";
+                    const lastServicedDays = (hash % 14) + 1;
+                    
+                    return (
+                      <>
+                        <div className="w-full h-px bg-slate-700 my-1"></div>
+                        
+                        <div className="flex items-start gap-3 text-sm">
+                          <Activity className="text-purple-400 shrink-0 mt-0.5" size={16} />
+                          <div className="w-full">
+                            <div className="text-slate-400 text-xs uppercase tracking-wider mb-1">Vault Cash Level</div>
+                            <div className="w-full bg-slate-700 rounded-full h-2 mb-1">
+                              <div className={`h-2 rounded-full ${cashLevel < 30 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${cashLevel}%` }}></div>
+                            </div>
+                            <div className="text-white text-xs">{cashLevel}% Capacity</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3 text-sm">
+                          <Wrench className="text-orange-400 shrink-0 mt-0.5" size={16} />
+                          <div>
+                            <div className="text-slate-400 text-xs uppercase tracking-wider">Hardware Status</div>
+                            <div className="text-white flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${status.includes('Active') ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                              {status}
+                            </div>
+                            <div className="text-slate-500 text-xs mt-1">Last serviced: {lastServicedDays} days ago</div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-start gap-3 text-sm">
+                          <Camera className="text-blue-400 shrink-0 mt-0.5" size={16} />
+                          <div>
+                            <div className="text-slate-400 text-xs uppercase tracking-wider">CCTV Feed Status</div>
+                            <div className="text-white">{cameraStatus}</div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </>
               )}
             </div>
