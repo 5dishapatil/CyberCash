@@ -50,10 +50,9 @@ export default function MapComponent({ incidents = [], predictions = [], termina
     center = [terminals[0].latitude, terminals[0].longitude];
   }
 
-  const getRiskAssets = (prob: number) => {
-    if (prob > 0.6) return { color: '#e11d48', icon: redIcon };
-    if (prob > 0.3) return { color: '#f59e0b', icon: orangeIcon };
-    return { color: '#eab308', icon: yellowIcon };
+  const getRiskAssets = (riskLevel: string) => {
+    if (riskLevel === 'HIGH') return { color: '#ef4444', icon: redIcon }; // High Risk -> Red
+    return { color: '#eab308', icon: yellowIcon }; // Medium and Low Risk -> Yellow
   };
 
   return (
@@ -91,7 +90,7 @@ export default function MapComponent({ incidents = [], predictions = [], termina
               // Show localized circles around high risk candidates
               if (p.top_k_terminals && p.top_k_terminals.length > 0) {
                 return p.top_k_terminals.map((tk: any) => {
-                  const assets = getRiskAssets(tk.prob);
+                  const assets = getRiskAssets(inc.risk_level);
                   return (
                     <React.Fragment key={`${p.id}-${tk.terminal_id}`}>
                       <Circle 

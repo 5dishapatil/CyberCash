@@ -34,6 +34,7 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
   const [terminals, setTerminals] = useState<any[]>([]);
   const [predictedAtm, setPredictedAtm] = useState<any>(null);
   const [allTerminalMap, setAllTerminalMap] = useState<Record<string, any>>({});
+  const [incidentRiskLevel, setIncidentRiskLevel] = useState<string>('LOW');
 
   useEffect(() => {
     // 1. Fetch all terminals for map coordinates
@@ -124,13 +125,20 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
               });
               
               setTerminals(mappedTerminals);
-              // We always highlight predicted atm if there's any scenario where we predict
-              // The user wants it highlighted AFTER prediction in EVERY scenario where applicable
               setPredictedAtm(mappedTerminals[0] || null);
             } else {
               setTerminals([]);
             }
-            setLoading(false);
+            
+            // Also fetch incident risk level
+            fetch(`http://localhost:8000/api/incidents`)
+              .then(r => r.json())
+              .then(incs => {
+                const inc = incs.find((i: any) => i.id === incidentId);
+                if (inc) setIncidentRiskLevel(inc.risk_level);
+                setLoading(false);
+              })
+              .catch(() => setLoading(false));
           });
       })
       .catch(console.error);
@@ -292,9 +300,12 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
                   
                   {/* Show ATMs and Red Highlight Box AFTER prediction is made (step > edges length) */}
                   {showPrediction && terminals.map((t: any, idx: number) => {
-                     // Red for critical (idx 0), Ochre for medium (idx > 0)
-                     const isCritical = idx === 0;
-                     const color = isCritical ? '#ef4444' : '#d97706';
+                     // Color based on incident risk level
+                     const isHighRisk = incidentRiskLevel === 'HIGH';
+                     const color = isHighRisk ? '#ef4444' : '#eab308'; // Red for HIGH, Yellow for Medium/Low
+                     
+                     // The top candidate still gets the specific dashed box to identify the primary target
+                     const isTopCandidate = idx === 0;
                      
                      // Calculate a bounding box for the red box requirement
                      const bounds: [[number, number], [number, number]] = [
@@ -304,7 +315,7 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
 
                      return (
                        <div key={idx}>
-                         {isCritical && (
+                         {isTopCandidate && (
                            <Rectangle 
                              bounds={bounds} 
                              pathOptions={{ color: '#ef4444', weight: 2, fillOpacity: 0.1, dashArray: '4' }} 
@@ -312,11 +323,11 @@ export default function LiveScenarioModal({ scenarioId, scenarioName, onClose }:
                          )}
                          <CircleMarker
                            center={[t.lat, t.lon]}
-                           radius={isCritical ? 12 : 8}
+                           radius={isTopCandidate ? 12 : 8}
                            pathOptions={{
                              color: color,
                              fillColor: color,
-                             fillOpacity: isCritical ? 0.8 : 0.6,
+                             fillOpacity: isTopCandidate ? 0.8 : 0.6,
                              weight: 2
                            }}
                          >
