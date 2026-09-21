@@ -131,7 +131,7 @@ export default function AuditLogs() {
             <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <FileText className="text-cyan-400" />
-                Audit Record Dossier — {selectedLog.id.substring(0,8)}...
+                Audit Record Dossier — {String(selectedLog.id).substring(0,8)}
               </h2>
               <button onClick={() => setSelectedLog(null)} className="text-slate-400 hover:text-white transition-colors">
                 <X size={24} />
