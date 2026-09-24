@@ -1,12 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { ReactFlow, Controls, Background, Node, Edge, MarkerType } from '@xyflow/react';
+import { ReactFlow, Controls, Background, Node, Edge, MarkerType, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { GitBranch, Filter, Loader, X, MapPin, Building2, Clock, Hash, ShieldAlert, Activity, Wrench, Camera } from 'lucide-react';
 
 export default function NetworkAnalysis() {
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [edges, setEdges] = useState<Edge[]>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [loading, setLoading] = useState(true);
   
   const [terminals, setTerminals] = useState<any[]>([]);
@@ -128,7 +128,14 @@ export default function NetworkAnalysis() {
             <p>Correlating macro-network topology...</p>
           </div>
         ) : (
-          <ReactFlow nodes={nodes} edges={edges} fitView onNodeClick={onNodeClick}>
+          <ReactFlow 
+            nodes={nodes} 
+            edges={edges} 
+            onNodesChange={onNodesChange} 
+            onEdgesChange={onEdgesChange} 
+            fitView 
+            onNodeClick={onNodeClick}
+          >
             <Background color="#1e293b" />
             <Controls className="bg-slate-800 fill-white border-slate-700" />
           </ReactFlow>

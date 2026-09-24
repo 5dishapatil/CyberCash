@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { ReactFlow, Controls, Background, Node, Edge, MarkerType } from '@xyflow/react';
+import { ReactFlow, Controls, Background, Node, Edge, MarkerType, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AlertCircle, Clock, ShieldAlert, CheckCircle, Activity, Map as MapIcon, User, Terminal, ArrowRight, X, MapPin, Building2, Hash, Wrench, Camera } from 'lucide-react';
@@ -106,30 +106,35 @@ export default function IncidentWorkspace() {
     });
   }
 
-  const flowNodes: Node[] = graphData.nodes.map((n, i) => ({
-    id: n.id,
-    position: { x: (i % 3) * 200 + 100, y: Math.floor(i / 3) * 150 + 50 },
-    data: { label: `${n.type.toUpperCase()}: ${n.id.substring(0,8)}`, originalType: n.type },
-    style: { 
-      background: n.type === 'terminal' ? '#1e1b4b' : '#1e293b', 
-      color: n.risk === 'HIGH' || n.risk === 'TARGET' ? '#f43f5e' : '#38bdf8',
-      border: `2px solid ${n.risk === 'HIGH' || n.risk === 'TARGET' ? '#be123c' : '#0369a1'}`,
-      borderRadius: n.type === 'terminal' ? '8px' : '50%',
-      padding: '10px',
-      cursor: n.type === 'terminal' ? 'pointer' : 'default',
-      boxShadow: n.type === 'terminal' ? '0 0 10px rgba(190, 18, 60, 0.2)' : 'none'
-    }
-  }));
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  const flowEdges: Edge[] = graphData.edges.map(e => ({
-    id: e.id,
-    source: e.source,
-    target: e.target,
-    animated: true,
-    label: e.label,
-    style: { stroke: '#ec4899', strokeWidth: 2 },
-    markerEnd: { type: MarkerType.ArrowClosed, color: '#ec4899' }
-  }));
+  useEffect(() => {
+    setNodes(graphData.nodes.map((n, i) => ({
+      id: n.id,
+      position: { x: (i % 3) * 200 + 100, y: Math.floor(i / 3) * 150 + 50 },
+      data: { label: `${n.type.toUpperCase()}: ${n.id.substring(0,8)}`, originalType: n.type },
+      style: { 
+        background: n.type === 'terminal' ? '#1e1b4b' : '#1e293b', 
+        color: n.risk === 'HIGH' || n.risk === 'TARGET' ? '#f43f5e' : '#38bdf8',
+        border: `2px solid ${n.risk === 'HIGH' || n.risk === 'TARGET' ? '#be123c' : '#0369a1'}`,
+        borderRadius: n.type === 'terminal' ? '8px' : '50%',
+        padding: '10px',
+        cursor: n.type === 'terminal' ? 'pointer' : 'default',
+        boxShadow: n.type === 'terminal' ? '0 0 10px rgba(190, 18, 60, 0.2)' : 'none'
+      }
+    })));
+
+    setEdges(graphData.edges.map(e => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      animated: true,
+      label: e.label,
+      style: { stroke: '#ec4899', strokeWidth: 2 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: '#ec4899' }
+    })));
+  }, [graphData, setNodes, setEdges]);
 
   const onNodeClick = (_: any, node: Node) => {
     if (node.data?.originalType === 'terminal') {
@@ -222,7 +227,14 @@ export default function IncidentWorkspace() {
         
         {activeTab === 'network' && (
           <div className="w-full h-full bg-slate-900 rounded-xl border border-slate-700 relative flex overflow-hidden">
-            <ReactFlow nodes={flowNodes} edges={flowEdges} fitView onNodeClick={onNodeClick}>
+            <ReactFlow 
+              nodes={nodes} 
+              edges={edges} 
+              onNodesChange={onNodesChange} 
+              onEdgesChange={onEdgesChange} 
+              fitView 
+              onNodeClick={onNodeClick}
+            >
               <Background color="#1e293b" />
               <Controls className="bg-slate-800 fill-white border-slate-700" />
             </ReactFlow>
