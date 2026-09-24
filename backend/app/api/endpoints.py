@@ -266,7 +266,7 @@ def get_incident_timeline(incident_id: str, db: Session = Depends(get_db)):
     for tx in txs:
         timeline.append({"type": "TRANSACTION", "timestamp": tx.timestamp.isoformat(), "data": {"id": tx.id, "source": tx.source_account, "destination": tx.destination_account, "amount": tx.amount, "risk": tx.risk_signal}})
     for p in preds:
-        timeline.append({"type": "PREDICTION", "timestamp": p.timestamp.isoformat(), "data": {"id": p.id, "cashout_probability": p.cashout_probability, "confidence": p.confidence, "top_k": p.top_k_terminals}})
+        timeline.append({"type": "PREDICTION", "timestamp": p.timestamp.isoformat(), "data": {"id": p.id, "cashout_probability": p.cashout_probability, "confidence": p.confidence, "top_k": p.top_k_terminals, "predicted_region_h3": p.predicted_region_h3 or "Unknown Regional Block"}})
     for a in audits:
         timeline.append({"type": "AUDIT", "timestamp": a.timestamp.isoformat(), "data": {"action": a.action, "user": a.user_id, "details": a.details, "hash_chain": getattr(a, "hash_chain", None)}})
     for n in notifs:

@@ -375,7 +375,7 @@ export default function IncidentWorkspace() {
                         {item.type === 'TRANSACTION' ? (
                            <span>Transfer of <strong className="text-rose-400">?{item.data.amount}</strong> from <span className="font-mono">{item.data.source}</span> to <span className="font-mono">{item.data.destination}</span></span>
                         ) : item.type === 'PREDICTION' ? (
-                           <span>Risk Probability: <strong className="text-rose-400">{(item.data.cashout_probability * 100).toFixed(1)}%</strong> | Region: {item.data.predicted_region_h3}</span>
+                           <span>Risk Probability: <strong className="text-rose-400">{(item.data.cashout_probability * 100).toFixed(1)}%</strong> | Target Zone: {item.data.predicted_region_h3?.includes('REGION') ? item.data.predicted_region_h3 : `Sector Radius ${item.data.predicted_region_h3}km`}</span>
                         ) : item.type === 'NOTIFICATION' ? (
                            <div className="bg-slate-900/50 p-2 rounded border border-slate-700">
                               <div className="text-cyan-400 font-bold mb-1">[{item.data.channel}] ? {item.data.recipient}</div>
