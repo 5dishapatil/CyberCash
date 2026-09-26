@@ -11,7 +11,11 @@
 **(Visual: Start on the main 'Command Centre' page)**
 
 **Speaker:**
-"Welcome to CyberCash Sentinel. Today, I'm going to walk you through our Predictive Financial Cybercrime Intelligence platform. Traditional banking security systems are reactive—they alert you *after* the funds are gone. We built CyberCash to be entirely proactive. 
+"Welcome to CyberCash Sentinel. Today, I'm going to walk you through our solution to a critical challenge in modern law enforcement: the lag in cybercrime intervention.
+
+Currently, when a financial cybercrime occurs, investigators rely on post-incident complaints. The damage is already done, and the stolen funds have vanished into complex mule networks or been withdrawn as physical cash. Traditional security systems are entirely reactive—they alert you *after* the funds are gone.
+
+The core problem we are solving is the need for a **Predictive Analytics Framework**. We take early-stage cybercrime complaints and live transaction signals, and use them to **forecast likely cash withdrawal locations in advance**. By pinpointing these physical targets, we generate actionable intelligence that enables timely and proactive cybercrime intervention—allowing authorities to intercept criminals at the ATM *before* the money leaves the system.
 
 Right now, we are looking at the **Command Centre**. This is our primary dashboard, giving us a live bird's-eye view of the entire threat landscape. At the top, you can immediately see our key performance indicators: the number of active threats, total financial exposure, and our AI precision score. 
 
