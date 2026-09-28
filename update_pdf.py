@@ -1,4 +1,6 @@
-'use client';
+import os
+
+CODE = r"""'use client';
 import { FileText, Download, Activity, Target, Clock, ShieldAlert, Crosshair } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import jsPDF from 'jspdf';
@@ -25,9 +27,9 @@ export default function Reports() {
       const width = doc.internal.pageSize.getWidth();
       const height = doc.internal.pageSize.getHeight();
 
-      const darkBg: [number, number, number] = [11, 19, 32];
-      const darkBox: [number, number, number] = [21, 33, 54];
-      const cyan: [number, number, number] = [0, 195, 217];
+      const darkBg = [11, 19, 32];
+      const darkBox = [21, 33, 54];
+      const cyan = [0, 195, 217];
       
       const drawHeaderAndFooter = (pageNum: number) => {
         doc.setFillColor(darkBg[0], darkBg[1], darkBg[2]);
@@ -529,3 +531,7 @@ export default function Reports() {
     </div>
   );
 }
+"""
+
+with open('frontend/src/app/reports/page.tsx', 'w', encoding='utf-8') as f:
+    f.write(CODE)

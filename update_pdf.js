@@ -1,3 +1,6 @@
+const fs = require('fs');
+
+const code = `
 'use client';
 import { FileText, Download, Activity, Target, Clock, ShieldAlert, Crosshair } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -25,9 +28,9 @@ export default function Reports() {
       const width = doc.internal.pageSize.getWidth();
       const height = doc.internal.pageSize.getHeight();
 
-      const darkBg: [number, number, number] = [11, 19, 32];
-      const darkBox: [number, number, number] = [21, 33, 54];
-      const cyan: [number, number, number] = [0, 195, 217];
+      const darkBg = [11, 19, 32];
+      const darkBox = [21, 33, 54];
+      const cyan = [0, 195, 217];
       
       const drawHeaderAndFooter = (pageNum: number) => {
         doc.setFillColor(darkBg[0], darkBg[1], darkBg[2]);
@@ -44,7 +47,7 @@ export default function Reports() {
         doc.setTextColor(148, 163, 184);
         doc.setFontSize(8);
         doc.text('CONFIDENTIAL — AUTHORIZED PERSONNEL ONLY', 40, height - 30);
-        doc.text(`Page ${pageNum}`, width - 40, height - 30, { align: 'right' });
+        doc.text(\`Page \${pageNum}\`, width - 40, height - 30, { align: 'right' });
         doc.setDrawColor(220);
         doc.setLineWidth(1);
         doc.line(40, height - 45, width - 40, height - 45);
@@ -89,6 +92,7 @@ export default function Reports() {
       doc.setFillColor(darkBg[0], darkBg[1], darkBg[2]);
       doc.rect(0, 0, width, height, 'F');
       
+      // Circles decoration
       doc.setFillColor(6, 45, 75);
       doc.circle(width, 0, 300, 'F');
       doc.circle(0, height, 200, 'F');
@@ -113,6 +117,7 @@ export default function Reports() {
       const sub = doc.splitTextToSize('Real-time prediction of potential cash-out activity, expected time windows and likely withdrawal locations for proactive cyber-fraud intervention.', width - 100);
       doc.text(sub, 40, 310);
       
+      // Info Box
       doc.setFillColor(darkBox[0], darkBox[1], darkBox[2]);
       doc.roundedRect(40, 400, width - 80, 180, 10, 10, 'F');
       
@@ -130,7 +135,7 @@ export default function Reports() {
       
       doc.setTextColor(148, 163, 184);
       doc.setFontSize(8);
-      doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 650);
+      doc.text(\`Generated: \${new Date().toLocaleString()}\`, 40, 650);
       doc.text('MHA / I4C Prototype — Demonstration Environment', 40, height - 40);
       doc.text('CONFIDENTIAL — AUTHORIZED PERSONNEL ONLY', width - 40, height - 40, { align: 'right' });
       
@@ -155,20 +160,21 @@ export default function Reports() {
       doc.text('Current Evaluation Snapshot', 40, cy);
       cy += 25;
       
+      // 6 boxes
       const boxW = (width - 100) / 2;
       const boxH = 70;
       const formatCurrency = (amount: number) => {
         const formatter = new Intl.NumberFormat('en-IN', { maximumSignificantDigits: 3 });
-        return `${formatter.format(amount)}`;
+        return \`\${formatter.format(amount)}\`;
       };
 
       const metrics = [
         { label: 'ACTIVE INCIDENTS', val: String(data.active_incidents || 0), col: [225, 29, 72] },
         { label: 'INCIDENTS EVALUATED', val: String(data.total_evaluated || 0), col: [245, 158, 11] },
-        { label: 'TOP-5 PRECISION', val: `${((data.precision_at_5 || 0) * 100).toFixed(1)}%`, col: [6, 182, 212] },
-        { label: 'ADVANCE WARNING', val: `${data.avg_lead_time || 0} min`, col: [16, 185, 129] },
-        { label: 'GEOGRAPHIC ERROR', val: `${data.avg_geo_error || 0} km`, col: [6, 182, 212] },
-        { label: 'AMOUNT AT RISK', val: `${formatCurrency(data.amount_at_risk || 0)}`, col: [245, 158, 11] }
+        { label: 'TOP-5 PRECISION', val: \`\${((data.precision_at_5 || 0) * 100).toFixed(1)}%\`, col: [6, 182, 212] },
+        { label: 'ADVANCE WARNING', val: \`\${data.avg_lead_time || 0} min\`, col: [16, 185, 129] },
+        { label: 'GEOGRAPHIC ERROR', val: \`\${data.avg_geo_error || 0} km\`, col: [6, 182, 212] },
+        { label: 'AMOUNT AT RISK', val: \`\${formatCurrency(data.amount_at_risk || 0)}\`, col: [245, 158, 11] }
       ];
       
       for(let i=0; i<6; i++) {
@@ -249,9 +255,9 @@ export default function Reports() {
       cy = renderTable(cy,
         [['Metric', 'Current Value', 'Interpretation']],
         [
-          ['Top-5 Precision', `${((data.precision_at_5 || 0) * 100).toFixed(1)}%`, 'Measures how often relevant locations appear within the top five predictions.'],
-          ['Average Advance Warning', `${data.avg_lead_time || 0} min`, 'Average time between the prediction and the observed cash-out event in the current evaluation.'],
-          ['Average Geographic Error', `${data.avg_geo_error || 0} km`, 'Distance between the predicted and actual geographic location.'],
+          ['Top-5 Precision', \`\${((data.precision_at_5 || 0) * 100).toFixed(1)}%\`, 'Measures how often relevant locations appear within the top five predictions.'],
+          ['Average Advance Warning', \`\${data.avg_lead_time || 0} min\`, 'Average time between the prediction and the observed cash-out event in the current evaluation.'],
+          ['Average Geographic Error', \`\${data.avg_geo_error || 0} km\`, 'Distance between the predicted and actual geographic location.'],
           ['Incidents Evaluated', String(data.total_evaluated || 0), 'Number of incidents included in the current evaluation.']
         ],
         { 0: { cellWidth: 100 }, 1: { cellWidth: 80, fontStyle: 'bold' } }
@@ -291,6 +297,7 @@ export default function Reports() {
       doc.text(p6, 40, cy);
       cy += p6.length * 15 + 40;
       
+      // Diagram box
       doc.setFillColor(248, 250, 252);
       doc.setDrawColor(203, 213, 225);
       doc.setLineWidth(2);
@@ -425,10 +432,11 @@ export default function Reports() {
       doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(50);
-      const p11 = doc.splitTextToSize('CyberCash Sentinel is designed to move cyber-fraud response from retrospective investigation toward proactive intelligence. The platform combines transaction behaviour, temporal patterns, fraud-network relationships and geographic information to predict potential cash-out activity before it occurs.\n\nThe core intelligence is structured around three questions: Will a cash-out happen? When is it likely to happen? Where is it likely to happen? The system then converts these predictions into ranked candidate locations and delivers them to authorized personnel for human verification and action.\n\nConfirmed outcomes provide feedback for monitoring and controlled model improvement, allowing the platform to evolve as transaction and fraud behaviour changes.', width - 80);
+      const p11 = doc.splitTextToSize('CyberCash Sentinel is designed to move cyber-fraud response from retrospective investigation toward proactive intelligence. The platform combines transaction behaviour, temporal patterns, fraud-network relationships and geographic information to predict potential cash-out activity before it occurs.\\n\\nThe core intelligence is structured around three questions: Will a cash-out happen? When is it likely to happen? Where is it likely to happen? The system then converts these predictions into ranked candidate locations and delivers them to authorized personnel for human verification and action.\\n\\nConfirmed outcomes provide feedback for monitoring and controlled model improvement, allowing the platform to evolve as transaction and fraud behaviour changes.', width - 80);
       doc.text(p11, 40, cy);
       cy += p11.length * 15 + 40;
       
+      // Core Innovation Box
       doc.setFillColor(darkBg[0], darkBg[1], darkBg[2]);
       doc.roundedRect(40, cy, width - 80, 120, 10, 10, 'F');
       
@@ -450,7 +458,7 @@ export default function Reports() {
       doc.text('DEMO NOTICE: This report contains synthetic prototype data and is intended for demonstration purposes.', 40, cy);
 
       // Save
-      doc.save(`CyberCash_Intelligence_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+      doc.save(\`CyberCash_Intelligence_Report_\${new Date().toISOString().split('T')[0]}.pdf\`);
     } catch (err) {
       console.error('Failed to generate PDF', err);
       alert('Failed to generate PDF report.');
@@ -462,9 +470,9 @@ export default function Reports() {
   const statCards = [
     { label: 'Active Incidents', value: stats?.active_incidents || 0, icon: Activity, color: 'text-rose-400' },
     { label: 'Total Incidents Evaluated', value: stats?.total_evaluated || 0, icon: ShieldAlert, color: 'text-amber-400' },
-    { label: 'Top-5 Precision', value: `${((stats?.precision_at_5 || 0) * 100).toFixed(1)}%`, icon: Target, color: 'text-cyan-400' },
-    { label: 'Avg Advance Warning', value: `${stats?.avg_lead_time || 0} min`, icon: Clock, color: 'text-emerald-400' },
-    { label: 'Avg Geo Error', value: `${stats?.avg_geo_error || 0} km`, icon: Crosshair, color: 'text-indigo-400' },
+    { label: 'Top-5 Precision', value: \`\${((stats?.precision_at_5 || 0) * 100).toFixed(1)}%\`, icon: Target, color: 'text-cyan-400' },
+    { label: 'Avg Advance Warning', value: \`\${stats?.avg_lead_time || 0} min\`, icon: Clock, color: 'text-emerald-400' },
+    { label: 'Avg Geo Error', value: \`\${stats?.avg_geo_error || 0} km\`, icon: Crosshair, color: 'text-indigo-400' },
   ];
 
   return (
@@ -477,7 +485,7 @@ export default function Reports() {
         <button 
           onClick={generatePDF}
           disabled={loadingPdf}
-          className={`flex items-center gap-2 px-4 py-2 ${loadingPdf ? 'bg-cyan-800 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500'} text-white rounded-lg font-medium text-sm transition-colors shadow-lg shadow-cyan-900/20`}
+          className={\`flex items-center gap-2 px-4 py-2 \${loadingPdf ? 'bg-cyan-800 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500'} text-white rounded-lg font-medium text-sm transition-colors shadow-lg shadow-cyan-900/20\`}
         >
           <Download size={16} /> {loadingPdf ? 'Generating PDF...' : 'Export Intelligence PDF'}
         </button>
@@ -529,3 +537,6 @@ export default function Reports() {
     </div>
   );
 }
+\`;
+
+fs.writeFileSync('frontend/src/app/reports/page.tsx', code);
