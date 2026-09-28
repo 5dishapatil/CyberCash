@@ -1,101 +1,66 @@
-# CyberCash Sentinel - Detailed Prototype Walkthrough Script
+# CyberCash Sentinel - 4-Minute Feature Pitch
 
-**Title:** CyberCash Sentinel: End-to-End Walkthrough
-**Tone:** Confident, knowledgeable, and engaging.
-**Duration:** ~5-7 minutes
-
----
-
-## 🎬 Introduction & Command Centre (0:00 - 1:00)
-
-**(Visual: Start on the main 'Command Centre' page)**
-
-**Speaker:**
-"Welcome to CyberCash Sentinel. Today, I'm going to walk you through our solution to a critical challenge in modern law enforcement: the lag in cybercrime intervention.
-
-Currently, when a financial cybercrime occurs, investigators rely on post-incident complaints. The damage is already done, and the stolen funds have vanished into complex mule networks or been withdrawn as physical cash. Traditional security systems are entirely reactive—they alert you *after* the funds are gone.
-
-The core problem we are solving is the need for a **Predictive Analytics Framework**. We take early-stage cybercrime complaints and live transaction signals, and use them to **forecast likely cash withdrawal locations in advance**. By pinpointing these physical targets, we generate actionable intelligence that enables timely and proactive cybercrime intervention—allowing authorities to intercept criminals at the ATM *before* the money leaves the system.
-
-Right now, we are looking at the **Command Centre**. This is our primary dashboard, giving us a live bird's-eye view of the entire threat landscape. At the top, you can immediately see our key performance indicators: the number of active threats, total financial exposure, and our AI precision score. 
-
-On the left, we have the Priority Incident Queue triaging threats in real-time, and on the right, the Strategic Threat Map giving us geographical context. From here, we can dive deep into any specific alert."
+**Title:** CyberCash Sentinel: Fast-Paced Feature Walkthrough
+**Tone:** Confident, punchy, and highly technical but accessible.
+**Duration:** ~3.5 to 4 minutes
 
 ---
 
-## 🚨 Incidents & Incident Workspace (1:00 - 2:30)
+## 🎬 Intro & Command Centre (0:00 - 0:45)
 
-**(Visual: Click on the 'Incidents' tab in the left sidebar, then click on a specific Incident ID to open its Workspace)**
+**(Visual: Start on the main 'Command Centre' page. Highlight the new dark-mode UI.)**
 
 **Speaker:**
-"Let's click on **Incidents** in the sidebar. This gives us a tabular view of all flagged threats. If we click on a specific 'High Risk' incident, we enter the **Incident Workspace**—a dedicated dossier for a single ongoing attack.
+"Welcome to CyberCash Sentinel. We are solving a critical law enforcement challenge: traditional banking security is entirely reactive. We've built a **Predictive Analytics Framework** that takes early-stage cybercrime complaints and live transaction signals to **forecast likely cash withdrawal locations in advance**. Our goal? Intercept the criminals at the ATM *before* the money is gone.
 
-Here, we have four distinct sub-tabs designed for deep investigation:
-- **Overview:** Shows a localized threat map and the exact terminals being targeted.
-- **Network:** *(Click Network)* Here, we visualize the flow of illicit funds across compromised accounts and destination ATMs. We can even click on an ATM node to pull up a detailed profile—showing its vault cash, CCTV status, and exact coordinates.
-- **Predictions:** *(Click Predictions)* This is our AI forecasting chart. The solid line tracks the historical escalation of risk, while the dashed line projects the probability of a cash-out attack 15 to 30 minutes into the future. It’s incredibly intuitive.
-- **Timeline:** *(Click Timeline)* Finally, the timeline provides a chronological ledger of every single transaction, model prediction, and system alert. Notice that every prediction clearly logs the exact Target Zone and Sector Radius, ensuring law enforcement knows exactly where to go."
+Notice our new, premium cyber-ops dark interface. Right here on the **Command Centre**, you instantly see live KPIs, a real-time Priority Incident Queue, and a Strategic Threat Map. Everything is designed for immediate situational awareness."
 
 ---
 
-## 🗺️ GIS Intelligence (2:30 - 3:00)
+## 🚨 Incident Workspace (0:45 - 1:30)
 
-**(Visual: Click on the 'GIS Intelligence' tab in the left sidebar)**
+**(Visual: Click 'Incidents', then open a specific High-Risk Incident)**
 
 **Speaker:**
-"Next, let's move to **GIS Intelligence**. 
-
-This is our dedicated, full-screen spatial analysis tool. It isn't a map of past crimes; it's a live, predictive battlefield. When the AI detects the early stages of a coordinated attack—like a mule network—it highlights the physical ATM terminals that are most at risk. 
-
-ATMs marked in **Red** indicate a 'High Risk' prediction, meaning an attack is imminent. ATMs in **Yellow** are 'Medium' or 'Low' risk. This allows security teams to physically intercept fraudsters before the cash is withdrawn."
+"Clicking into a specific incident opens a dedicated dossier. We have four deep-dive tabs:
+- **Overview:** Maps the exact terminals under threat.
+- **Network:** Visualizes the illicit money flow. You can click on any ATM node to see its vault cash, CCTV status, and exact coordinates.
+- **Predictions:** Our AI forecasting chart. The dashed line projects the probability of a cash-out attack 15 to 30 minutes into the future. 
+- **Timeline:** A chronological ledger of every transaction and system alert, logging exact Target Zones and Sector Radii so ground teams know exactly where to deploy."
 
 ---
 
-## 🕸️ Network Analysis (3:00 - 3:30)
+## 🗺️ GIS & Network Intelligence (1:30 - 2:15)
 
-**(Visual: Click on the 'Network Analysis' tab in the left sidebar)**
+**(Visual: Click 'GIS Intelligence', then 'Network Analysis')**
 
 **Speaker:**
-"Moving down to **Network Analysis**, we shift from geographical intelligence to structural intelligence. 
+"Moving to **GIS Intelligence**, this is our live spatial battlefield. The AI highlights physical ATM terminals at risk. Terminals in **Red** indicate a 'High Risk' imminent attack, while **Yellow** indicates medium risk.
 
-Fraudsters rarely act alone. This tab stitches together multiple isolated incidents into a macro-network graph. By mapping the relationships between seemingly unrelated transactions across the country, investigators can identify the central money laundering hubs orchestrating the attacks."
+In **Network Analysis**, we shift from spatial to structural intelligence. Fraudsters operate in rings. This tab stitches together isolated incidents into a macro-network graph, exposing the central money laundering hubs orchestrating the attacks nationwide."
 
 ---
 
-## 📈 Predictions & Reports (3:30 - 4:15)
+## 📈 Predictions & 9-Page Reports (2:15 - 3:00)
 
-**(Visual: Click on the 'Predictions' tab, then click on the 'Reports' tab)**
+**(Visual: Click 'Predictions', then 'Reports'. Click 'Export Intelligence PDF')**
 
 **Speaker:**
-"Under the **Predictions** tab, we offer a specialized view that aggregates all AI forecasting metrics across every active incident, allowing analysts to compare threat trajectories side-by-side.
+"The **Predictions** tab aggregates our AI forecasting across all active incidents. But our standout feature is in the **Reports** tab. 
 
-But intelligence is only useful if you can act on it. Let's head over to **Reports**. 
-When it's time to brief stakeholders or law enforcement, clicking the 'Export Intelligence PDF' button instantly generates a beautifully formatted, highly detailed analytical document. It captures our live key performance indicators and a ledger of the top high-risk dossiers, ready for secure distribution."
+When you need to brief stakeholders, clicking 'Export Intelligence PDF' doesn't just print a table. It dynamically generates a stunning, 9-page presentation-grade Intelligence Report. It populates live evaluation metrics—like our Top-5 Precision and Advance Warning times—directly into a highly structured, confidential briefing document ready for immediate distribution."
 
 ---
 
-## 🔬 Simulation Lab & Model Ops (4:15 - 5:00)
+## 🔬 Simulation, Ops & Audit (3:00 - 3:45)
 
-**(Visual: Click on the 'Simulation Lab', then 'Model Ops' tabs)**
-
-**Speaker:**
-"To ensure our system is always battle-ready, we built the **Simulation Lab**. Here, we can inject synthetic adversarial attacks—like distributed smurfing or localized cash-outs—directly into the engine to test its response times and accuracy in real-time.
-
-Over in **Model Ops**, our data science and engineering teams can monitor the underlying AI infrastructure. We track model drift, feature importance, and precision-recall metrics to ensure our LightGBM algorithms remain finely tuned and legally defensible."
-
----
-
-## 🛡️ Audit & Security & System Health (5:00 - 5:30)
-
-**(Visual: Click on the 'Audit & Security' tab, show the interactive modal, then click 'System Health')**
+**(Visual: Quickly click through Simulation Lab, Model Ops, and Audit & Security)**
 
 **Speaker:**
-"Security and accountability are paramount. In the **Audit & Security** tab, every action taken on this platform is immutably logged. If I click on any analyst's action, an Executive Action Summary modal appears. It actively pulls up the exact trigger points, terminal IDs, and transaction traces—providing total transparency for compliance reviews.
+"To keep the system battle-ready, our **Simulation Lab** lets us inject synthetic adversarial attacks to test response times. **Model Ops** allows data scientists to track our LightGBM algorithm's drift and precision.
 
-Finally, the **System Health** tab gives our DevOps team a transparent view into the heartbeat of our microservices, ensuring 99.9% uptime.
+Finally, in **Audit & Security**, every action is immutably logged. Clicking an action pulls up a complete Executive Summary with transaction traces for total compliance transparency. 
 
-*(Visual: Return to the Command Centre)*
+*(Visual: Return to Command Centre)*
 
-In summary, CyberCash Sentinel doesn't just record financial crime—it intercepts it. By combining advanced graph AI, real-time spatial intelligence, and beautiful, actionable interfaces, we are giving security teams the power to stay one step ahead of the adversaries. 
-
-Thank you for your time."
+In just a few minutes, we've gone from live signals to AI prediction, spatial tracking, and a 9-page actionable report. CyberCash Sentinel doesn't just record financial crime—it intercepts it. Thank you."
