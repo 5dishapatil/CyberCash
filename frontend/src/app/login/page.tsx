@@ -66,14 +66,14 @@ export default function Login() {
     <div className="flex items-center justify-center min-h-screen bg-[#030712] p-4 relative overflow-hidden">
       {/* Radial glow background */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-500/[0.04] rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-violet-500/[0.04] rounded-full blur-[120px]" />
         <div className="absolute top-1/4 right-1/4 w-[300px] h-[300px] bg-indigo-500/[0.03] rounded-full blur-[100px]" />
       </div>
 
       <div className="w-full max-w-md relative z-10">
         <div className="bg-gradient-to-b from-slate-800/70 to-slate-900/70 p-8 rounded-2xl border border-slate-700/50 shadow-2xl shadow-black/60 backdrop-blur-xl">
           <div className="flex justify-center mb-6">
-            <div className="bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 p-4 rounded-2xl text-cyan-400" style={{boxShadow: '0 0 40px rgba(6, 182, 212, 0.15)'}}>
+            <div className="bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 p-4 rounded-2xl text-cyan-400" style={{boxShadow: '0 0 40px rgba(167, 139, 250, 0.15)'}}>
               <ShieldCheck size={44} strokeWidth={1.5} />
             </div>
           </div>
@@ -124,7 +124,7 @@ export default function Login() {
               type="submit"
               disabled={loading}
               className="w-full bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-xl transition-all duration-200"
-              style={{boxShadow: '0 0 25px rgba(6, 182, 212, 0.2)'}}
+              style={{boxShadow: '0 0 25px rgba(167, 139, 250, 0.2)'}}
             >
               {loading ? 'Authenticating...' : 'Authenticate'}
             </button>

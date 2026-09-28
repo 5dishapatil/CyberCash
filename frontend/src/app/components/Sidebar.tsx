@@ -51,7 +51,7 @@ export default function Sidebar() {
   return (
     <aside className="w-64 bg-gradient-to-b from-[#0a0f1e] via-[#0c1425] to-[#0a0f1e] text-slate-300 h-screen fixed top-0 left-0 flex flex-col border-r border-slate-800/60 z-50" style={{boxShadow: '1px 0 30px rgba(0,0,0,0.4)'}}>
       <div className="p-5 border-b border-slate-800/60 flex items-center gap-3">
-        <div className="bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 p-2.5 rounded-xl text-cyan-400" style={{boxShadow: '0 0 20px rgba(6, 182, 212, 0.15)'}}>
+        <div className="bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 p-2.5 rounded-xl text-cyan-400" style={{boxShadow: '0 0 20px rgba(167, 139, 250, 0.15)'}}>
           <ShieldCheck size={22} />
         </div>
         <div className="flex flex-col">
@@ -94,9 +94,9 @@ export default function Sidebar() {
                       ? 'bg-gradient-to-r from-cyan-500/15 to-cyan-500/5 text-cyan-400 font-medium'
                       : 'hover:bg-white/[0.03] hover:text-white'
                   }`}
-                  style={isActive ? {boxShadow: 'inset 0 0 20px rgba(6, 182, 212, 0.05)'} : {}}
+                  style={isActive ? {boxShadow: 'inset 0 0 20px rgba(167, 139, 250, 0.05)'} : {}}
                 >
-                  {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-cyan-400 rounded-r-full" style={{boxShadow: '0 0 8px rgba(6, 182, 212, 0.6)'}} />}
+                  {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-cyan-400 rounded-r-full" style={{boxShadow: '0 0 8px rgba(167, 139, 250, 0.6)'}} />}
                   <Icon size={17} className={`transition-colors duration-200 ${isActive ? 'text-cyan-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
                   <span className="text-[13px]">{item.name}</span>
                 </Link>
